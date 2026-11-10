@@ -1,71 +1,61 @@
-// js/main.js
+async function loadDashboard() {
+    try {
+        const loadingEl = document.getElementById('loadingState');
+        if (loadingEl) loadingEl.classList.remove('hidden');
 
-// เรียกฟังก์ชันเมื่อโหลดหน้าเว็บเสร็จสมบูรณ์
+        // ดึงข้อมูลจากตาราง stock_box
+        const { data: stockList, error } = await _supabase
+            .from('stock_box')
+            .select('*');
+
+        if (error) throw error;
+
+        const tbody = document.getElementById('stockTableBody');
+        tbody.innerHTML = '';
+
+        if (!stockList || stockList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">ยังไม่มีข้อมูลในตาราง stock_box</td></tr>`;
+            return;
+        }
+
+        // วนลูปแสดงข้อมูล โดยอ้างอิงชื่อคอลัมน์ให้ตรงเป๊ะกับภาพ Supabase
+        stockList.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-gray-50 transition';
+            
+            // ใช้ชื่อคอลัมน์ตามโครงสร้างจริงใน Supabase ของคุณ
+            const boxId = item.StockBoxID || item.stock_box_id || '-';
+            const partName = item.Part_Name || item.part_name || '-';
+            const lotNo = item.LotNo || item.lot_no || '-';
+            const location = item.Location_Name || item.location_name || '-';
+            const qty = item.QtyBalance ?? item.qty_balance ?? 0;
+
+            tr.innerHTML = `
+                <td class="px-6 py-4 font-medium text-gray-900">${boxId}</td>
+                <td class="px-6 py-4 text-gray-700">${partName}</td>
+                <td class="px-6 py-4 text-gray-600">${lotNo}</td>
+                <td class="px-6 py-4 text-gray-600 font-semibold">${location}</td>
+                <td class="px-6 py-4 text-gray-800 font-bold">${qty}</td>
+                <td class="px-6 py-4">
+                    <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">ปกติ</span>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // อัปเดตตัวเลขสถิติภาพรวม
+        document.getElementById('statStock').textContent = stockList.length + ' รายการ';
+        
+        if (loadingEl) loadingEl.classList.add('hidden');
+
+    } catch (err) {
+        console.error("Error loading dashboard:", err.message);
+        const loadingEl = document.getElementById('loadingState');
+        if (loadingEl) loadingEl.classList.add('hidden');
+    }
+}
+
+// เรียกใช้งานเมื่อโหลดหน้าเว็บ
 document.addEventListener('DOMContentLoaded', () => {
     loadDashboard();
 });
-
-async function loadDashboard() {
-    const loadingEl = document.getElementById('loadingState');
-    const tableBody = document.getElementById('stockTableBody');
-
-    // แสดงสถานะ Loading
-    if (loadingEl) loadingEl.classList.remove('hidden');
-
-    // 1. ดึงข้อมูลสถิติและอัปเดต Card ตัวเลข
-    const stats = await getDashboardStats();
-    document.getElementById('statStock').textContent = `${stats.totalStock} รายการ`;
-    document.getElementById('statReceive').textContent = `${stats.totalReceive} บิล`;
-    document.getElementById('statIssue').textContent = `${stats.totalIssue} บิล`;
-    document.getElementById('statLocation').textContent = `${stats.totalLocations} ช่อง`;
-
-    // 2. ดึงข้อมูลตาราง Stock Box ล่าสุด
-    const stockList = await getRecentStockBox(10);
-
-    // ซ่อนสถานะ Loading
-    if (loadingEl) loadingEl.classList.add('hidden');
-
-    // 3. วนลูปแสดงผลในตาราง
-    tableBody.innerHTML = '';
-
-    if (stockList.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="6" class="px-6 py-8 text-center text-gray-400">
-                    ยังไม่มีข้อมูลในตาราง stock_box หรือชื่อคอลัมน์ไม่ตรงกัน
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    stockList.forEach((item, index) => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 transition border-b border-gray-100';
-
-        row.innerHTML = `
-            <td class="px-6 py-4 font-mono font-semibold text-blue-600">
-                ${item.StockBoxID || item.stockbox_id || '-'}
-            </td>
-            <td class="px-6 py-4 font-medium text-gray-900">
-                ${item.Part_Name || item.part_name || '-'}
-            </td>
-            <td class="px-6 py-4 text-gray-600">
-                ${item.LotNo || item.lot_no || '-'}
-            </td>
-            <td class="px-6 py-4 font-medium text-emerald-600">
-                ${item.Location_Name || item.location_name || '-'}
-            </td>
-            <td class="px-6 py-4 font-bold text-gray-800">
-                ${item.QtyBalance ?? item.qty_balance ?? 0}
-            </td>
-            <td class="px-6 py-4">
-                <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-semibold">
-                    ${item.Status || item.status || 'Active'}
-                </span>
-            </td>
-        `;
-
-        tableBody.appendChild(row);
-    });
-}
