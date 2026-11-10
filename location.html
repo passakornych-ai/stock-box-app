@@ -93,14 +93,14 @@
                 // 2. ดึงข้อมูลสินค้าคงเหลือจากตาราง stock_box เพื่อเช็กว่าช่องไหนมีของ
                 const { data: stockData, error: stockError } = await _supabase
                     .from('stock_box')
-                    .select('Location_Name, QtyBalance');
+                    .select('*');
 
                 if (stockError) throw stockError;
 
                 loadingEl.style.display = 'none';
 
                 if (!locData || locData.length === 0) {
-                    gridEl.innerHTML = `<p class="col-span-full text-center text-gray-400 py-8">ไม่พบข้อมูล Location ในระบบ</p>`;
+                    gridEl.innerHTML = `<p class="col-span-full text-center text-gray-400 py-8">ไม่พบข้อมูล Location ในระบบ (กรุณาตรวจสอบตาราง locations ใน Supabase)</p>`;
                     return;
                 }
 
@@ -108,9 +108,10 @@
                 const stockMap = {};
                 if (stockData) {
                     stockData.forEach(item => {
-                        const locName = item.Location_Name || item.location_name;
+                        const locName = item.Location_Name || item.location_name || item.LOCATION_NAME || item.name;
+                        const qty = item.QtyBalance ?? item.qty_balance ?? item.QTY_BALANCE ?? 1;
                         if (locName) {
-                            stockMap[locName] = (stockMap[locName] || 0) + (item.QtyBalance ?? item.qty_balance ?? 1);
+                            stockMap[locName] = (stockMap[locName] || 0) + Number(qty);
                         }
                     });
                 }
@@ -119,7 +120,8 @@
                 let occupied = 0;
 
                 locData.forEach(loc => {
-                    const code = loc.Location_Name || loc.location_name || 'Unknown';
+                    // รองรับชื่อคอลัมน์ได้ทุกรูปแบบ (พิมพ์ใหญ่/เล็ก/มี underscore)
+                    const code = loc.Location_Name || loc.location_name || loc.LOCATION_NAME || loc.name || Object.values(loc)[1] || 'Unknown';
                     const qty = stockMap[code] || 0;
                     const isOccupied = qty > 0;
 
