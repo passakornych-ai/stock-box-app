@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Box Management System</title>
+    
+    <!-- Tailwind CSS ผ่าน CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase JS Client ผ่าน CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="bg-gray-50 text-gray-800 p-6 md:p-10">
+
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-200 pb-6 gap-4">
+            <div>
+                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                    📦 Stock Box Management System
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    ระบบจัดการคลังสินค้าแบบ Pure HTML + Vanilla JS เชื่อมต่อ Supabase
+                </p>
+            </div>
+            <button onclick="loadDashboard()" class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition">
+                <span>🔄</span>
+                <span>รีเฟรชข้อมูล</span>
+            </button>
+        </div>
+
+        <!-- Stat Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center space-x-4">
+                <div class="p-3 bg-blue-50 text-blue-600 rounded-xl text-2xl">📦</div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-400">Stock คงเหลือทั้งหมด</p>
+                    <h3 id="statStock" class="text-2xl font-bold text-gray-900 mt-1">...</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center space-x-4">
+                <div class="p-3 bg-purple-50 text-purple-600 rounded-xl text-2xl">📥</div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-400">ประวัติรับเข้า (Receive)</p>
+                    <h3 id="statReceive" class="text-2xl font-bold text-gray-900 mt-1">...</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center space-x-4">
+                <div class="p-3 bg-amber-50 text-amber-600 rounded-xl text-2xl">📤</div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-400">ประวัติเบิกจ่าย (Issue)</p>
+                    <h3 id="statIssue" class="text-2xl font-bold text-gray-900 mt-1">...</h3>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-center space-x-4">
+                <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl text-2xl">📍</div>
+                <div>
+                    <p class="text-xs font-semibold uppercase text-gray-400">ตำแหน่ง Location</p>
+                    <h3 id="statLocation" class="text-2xl font-bold text-gray-900 mt-1">...</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                <h2 class="font-bold text-gray-900 text-lg">⚡ รายการ Stock Box ล่าสุด</h2>
+                <span id="loadingState" class="text-sm text-blue-600 animate-pulse hidden">กำลังโหลดข้อมูล...</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-500 uppercase text-xs border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3">StockBox ID</th>
+                            <th class="px-6 py-3">Part Name</th>
+                            <th class="px-6 py-3">Lot No</th>
+                            <th class="px-6 py-3">Location</th>
+                            <th class="px-6 py-3">จำนวนคงเหลือ</th>
+                            <th class="px-6 py-3">สถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stockTableBody" class="divide-y divide-gray-200">
+                        <!-- รายการข้อมูลจะถูกแทรกเข้ามาผ่าน JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- โหลด JavaScript เรียงตามลำดับความสำคัญ -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

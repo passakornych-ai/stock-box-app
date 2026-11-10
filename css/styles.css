@@ -1,0 +1,11 @@
+/* css/styles.css */
+
+/* สไตล์เพิ่มเติมเฉพาะทางนอกเหนือจาก Tailwind CSS */
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* เพิ่ม Effect เวลา Hover แถวตาราง */
+table tbody tr {
+    transition: background-color 0.15s ease-in-out;
+}
