@@ -22,6 +22,21 @@ const escapeHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+function renderAllReceiveColumnsList(obj) {
+  const entries = Object.entries(obj || {}).filter(([k]) => !k.startsWith('__'));
+  return entries
+    .map(([k, v]) => {
+      const displayVal = v === null || v === undefined || String(v).trim() === '' ? '-' : String(v);
+      return `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border-row);">
+          <span class="mono txt-muted" style="font-size:11.5px;flex-shrink:0;">${escapeHtml(k)}</span>
+          <span class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;">${escapeHtml(displayVal)}</span>
+        </div>
+      `;
+    })
+    .join('');
+}
+
 function showToast(message) {
   let toast = document.getElementById('toastBox');
   if (!toast) {
@@ -346,28 +361,24 @@ function openReceiveDrawerByIndex(index) {
   let detailsSectionHtml = '';
   if (matchedDetails.length > 0) {
     const detailCards = matchedDetails
-      .map((d) => {
-        const dPart = pickField(d, ['Part_Name', 'part_name', 'Product', 'StockBoxID']);
-        const dLot = pickField(d, ['LotNo', 'lot_no', 'Lot_No']);
-        const dQty = Number(pickField(d, ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'QtyBalance'], 0)) || 0;
-        return `
-          <div class="detail-row" style="align-items:center;">
-            <div>
-              <div class="txt-primary" style="font-size:13px;font-weight:600;">${escapeHtml(dPart)}</div>
-              <div class="mono txt-muted" style="font-size:11.5px;">LOT: ${escapeHtml(dLot)}</div>
-            </div>
-            <div class="mono txt-emerald" style="font-size:14px;font-weight:700;">+${dQty.toLocaleString()}</div>
+      .map(
+        (d, dIdx) => `
+        <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
+          <div class="mono txt-emerald" style="font-size:11px;font-weight:700;margin-bottom:6px;">
+            ITEM #${dIdx + 1}
           </div>
-        `;
-      })
+          <div>${renderAllReceiveColumnsList(d)}</div>
+        </div>
+      `
+      )
       .join('');
 
     detailsSectionHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
-        <div class="mono txt-emerald" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px;">
+        <div class="mono txt-emerald" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
           Detail Items (${matchedDetails.length})
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;">${detailCards}</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">${detailCards}</div>
       </div>
     `;
   }
