@@ -1,163 +1,233 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="th" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ผัง Location - Stock Box System</title>
-    
-    <!-- Tailwind CSS ผ่าน CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Supabase JS Client ผ่าน CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-</head>
-<body class="bg-gray-50 text-gray-800 p-6 md:p-10">
-
-    <div class="max-w-7xl mx-auto space-y-6">
-        
-        <!-- Header & Nav Menu -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-200 pb-6 gap-4">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight">
-                    📍 ผังแสดงตำแหน่ง Location
-                </h1>
-                <p class="text-sm text-gray-500 mt-1">
-                    ตรวจสอบสถานะช่องจัดเก็บสินค้าภายในคลังสินค้าแบบเรียลไทม์
-                </p>
-            </div>
-            
-            <!-- เมนูกลับหน้าหลัก -->
-            <div>
-                <a href="index.html" class="inline-flex items-center space-x-2 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                    <span>🏠</span>
-                    <span>กลับหน้าแดชบอร์ดหลัก</span>
-                </a>
-            </div>
-        </div>
-
-        <!-- Action Toolbar & Stats Summary -->
-        <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-200">
-            <button onclick="loadLocations()" class="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium shadow-sm transition">
-                <span>🔄</span>
-                <span>โหลดข้อมูลผังใหม่</span>
-            </button>
-
-            <!-- Status Pills Stats -->
-            <div class="flex flex-wrap gap-3">
-                <div class="px-4 py-2 rounded-xl text-sm font-medium bg-blue-50 border border-blue-200 text-blue-700">
-                    📍 Location ทั้งหมด: <b id="totalLoc">0</b> ช่อง
-                </div>
-                <div class="px-4 py-2 rounded-xl text-sm font-medium bg-emerald-50 border border-emerald-200 text-emerald-700">
-                    🟢 Location ที่มีของ: <b id="occupiedLoc">0</b> ช่อง
-                </div>
-                <div class="px-4 py-2 rounded-xl text-sm font-medium bg-gray-100 border border-gray-200 text-gray-600">
-                    ⚪ Location ว่าง: <b id="emptyLoc">0</b> ช่อง
-                </div>
-            </div>
-        </div>
-
-        <!-- Grid Layout for Locations -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
-            <div id="loadingLocation" class="text-center py-12 text-gray-400">
-                กำลังโหลดผัง Location จาก Supabase...
-            </div>
-            
-            <!-- ตารางแสดงช่อง Location แบบ Grid -->
-            <div id="locationGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                <!-- ช่อง Location จะถูกสร้างแทรกด้วย JavaScript -->
-            </div>
-        </div>
-
-    </div>
-
-    <!-- โหลด Config กลางที่แยกไว้ -->
-    <script src="js/config.js"></script>
-    
-    <script>
-        // ฟังก์ชันดึงข้อมูลผัง Location และ Stock มาจับคู่แสดงผล
-        async function loadLocations() {
-            const loadingEl = document.getElementById('loadingLocation');
-            const gridEl = document.getElementById('locationGrid');
-            
-            loadingEl.style.display = 'block';
-            gridEl.innerHTML = '';
-
-            try {
-                // 1. ดึงข้อมูลช่อง Location ทั้งหมดจากตาราง locations
-                const { data: locData, error: locError } = await _supabase
-                    .from('locations')
-                    .select('*');
-
-                if (locError) throw locError;
-
-                // 2. ดึงข้อมูลสินค้าคงเหลือจากตาราง stock_box เพื่อเช็กว่าช่องไหนมีของ
-                const { data: stockData, error: stockError } = await _supabase
-                    .from('stock_box')
-                    .select('*');
-
-                if (stockError) throw stockError;
-
-                loadingEl.style.display = 'none';
-
-                if (!locData || locData.length === 0) {
-                    gridEl.innerHTML = `<p class="col-span-full text-center text-gray-400 py-8">ไม่พบข้อมูล Location ในระบบ</p>`;
-                    return;
-                }
-
-                // ทำ Mapping เช็กว่า Location ไหนมีสินค้าอยู่บ้าง (เทียบกับ Location_Name ใน stock_box)
-                const stockMap = {};
-                if (stockData) {
-                    stockData.forEach(item => {
-                        const locName = item.Location_Name || item.location_name || item.LocationID || item.location_id;
-                        const qty = item.QtyBalance ?? item.qty_balance ?? 1;
-                        if (locName) {
-                            stockMap[locName] = (stockMap[locName] || 0) + Number(qty);
-                        }
-                    });
-                }
-
-                let total = locData.length;
-                let occupied = 0;
-
-                locData.forEach(loc => {
-                    // ดึงค่าจากคอลัมน์ LocationID (รองรับหลายรูปแบบเพื่อความปลอดภัย)
-                    const code = loc.LocationID || loc.location_id || loc.Location_Name || loc.location_name || 'Unknown';
-                    const qty = stockMap[code] || 0;
-                    const isOccupied = qty > 0;
-
-                    if (isOccupied) occupied++;
-
-                    const card = document.createElement('div');
-                    card.className = `p-4 rounded-xl border flex flex-col items-center justify-center transition shadow-sm ${
-                        isOccupied 
-                            ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900 hover:bg-emerald-100' 
-                            : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
-                    }`;
-
-                    card.innerHTML = `
-                        <span class="font-bold text-sm tracking-wide">${code}</span>
-                        <span class="text-xs mt-1 font-medium">
-                            ${isOccupied ? `📦 (${qty})` : 'ว่าง'}
-                        </span>
-                    `;
-                    gridEl.appendChild(card);
-                });
-
-                // อัปเดตตัวเลขสถิติสรุปด้านบน
-                document.getElementById('totalLoc').textContent = total;
-                document.getElementById('occupiedLoc').textContent = occupied;
-                document.getElementById('emptyLoc').textContent = total - occupied;
-
-            } catch (err) {
-                loadingEl.style.display = 'none';
-                gridEl.innerHTML = `<p class="col-span-full text-center text-red-500 py-8">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${err.message}</p>`;
-            }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS STOCK // Location Matrix</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['IBM Plex Sans Thai', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
         }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #070b14;
+      background-image:
+        radial-gradient(circle at 20% 10%, rgba(16, 185, 129, 0.08), transparent 35%),
+        radial-gradient(circle at 80% 20%, rgba(34, 211, 238, 0.08), transparent 40%),
+        linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.68);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen antialiased">
 
-        // โหลดข้อมูลเมื่อเปิดหน้าเว็บ
-        document.addEventListener('DOMContentLoaded', () => {
-            loadLocations();
+  <header class="sticky top-0 z-30 glass-panel border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-400/15 border border-emerald-400/35 flex items-center justify-center text-xl">
+          📍
+        </div>
+        <div>
+          <h1 class="font-bold tracking-tight text-base sm:text-lg text-white">LOCATION <span class="text-emerald-400 font-mono text-sm">MATRIX</span></h1>
+          <p class="text-xs text-slate-400 hidden sm:block">ผังแสดงสถานะช่องจัดเก็บสินค้าแบบเรียลไทม์</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2.5">
+        <a href="index.html" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+          <span>←</span>
+          <span>แดชบอร์ด</span>
+        </a>
+        <button onclick="loadLocationMatrix()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-emerald-400 hover:bg-emerald-300 text-slate-950 transition shadow-lg shadow-emerald-400/20 cursor-pointer">
+          <span>↻</span>
+          <span>รีเฟรชผัง</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- Summary Strip -->
+    <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="glass-panel rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-mono text-slate-400 uppercase">Total Slots</p>
+          <p id="statTotal" class="text-2xl font-bold font-mono text-white mt-1">0</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-mono bg-slate-800 text-slate-300">ALL</span>
+      </div>
+
+      <div class="glass-panel rounded-2xl p-4 flex items-center justify-between border-emerald-500/25">
+        <div>
+          <p class="text-xs font-mono text-emerald-300/80 uppercase">Occupied Slots</p>
+          <p id="statOccupied" class="text-2xl font-bold font-mono text-emerald-300 mt-1">0</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-mono bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">มีของ</span>
+      </div>
+
+      <div class="glass-panel rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-mono text-slate-400 uppercase">Available Slots</p>
+          <p id="statEmpty" class="text-2xl font-bold font-mono text-cyan-300 mt-1">0</p>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-mono bg-cyan-500/10 text-cyan-300 border border-cyan-500/25">ว่าง</span>
+      </div>
+    </section>
+
+    <!-- Filter & Search -->
+    <section class="glass-panel rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <button data-filter="all" class="filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-cyan-400 text-slate-950 cursor-pointer">ทั้งหมด</button>
+        <button data-filter="occupied" class="filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">มีของ</button>
+        <button data-filter="empty" class="filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">ว่าง</button>
+      </div>
+      <input id="locSearch" type="text" placeholder="ค้นหาชื่อช่อง เช่น TA201/1..."
+        class="sm:w-72 px-4 py-2 rounded-xl bg-slate-900/80 border border-slate-700/80 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-400/70" />
+    </section>
+
+    <!-- Matrix Grid -->
+    <section class="glass-panel rounded-2xl p-5">
+      <div id="locLoading" class="py-10 text-center text-xs font-mono text-slate-400">LOADING LOCATION MATRIX...</div>
+      <div id="locationGrid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"></div>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script>
+    let matrixCards = [];
+    let currentFilter = 'all';
+
+    const pickField = (obj, keys, fallback = '') => {
+      for (const k of keys) {
+        if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') {
+          return obj[k];
+        }
+      }
+      return fallback;
+    };
+
+    async function loadLocationMatrix() {
+      const loading = document.getElementById('locLoading');
+      const grid = document.getElementById('locationGrid');
+      loading.classList.remove('hidden');
+      grid.innerHTML = '';
+
+      try {
+        const [{ data: locRows, error: locErr }, { data: stockRows, error: stockErr }] = await Promise.all([
+          _supabase.from('locations').select('*'),
+          _supabase.from('stock_box').select('*')
+        ]);
+
+        if (locErr) throw locErr;
+        if (stockErr) throw stockErr;
+
+        const mapByLoc = {};
+        (stockRows || []).forEach(item => {
+          const locKey = String(pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id'], '')).trim();
+          const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
+          if (!locKey) return;
+          if (!mapByLoc[locKey]) mapByLoc[locKey] = { count: 0, qty: 0 };
+          mapByLoc[locKey].count += 1;
+          mapByLoc[locKey].qty += qty;
         });
-    </script>
+
+        const rawLocs = locRows || [];
+        matrixCards = rawLocs.map(loc => {
+          const name = String(pickField(loc, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Row ID'], 'UNKNOWN')).trim();
+          const info = mapByLoc[name] || { count: 0, qty: 0 };
+          return {
+            name,
+            occupied: info.qty > 0 || info.count > 0,
+            boxes: info.count,
+            qty: info.qty
+          };
+        });
+
+        const occupiedCount = matrixCards.filter(c => c.occupied).length;
+        document.getElementById('statTotal').textContent = matrixCards.length;
+        document.getElementById('statOccupied').textContent = occupiedCount;
+        document.getElementById('statEmpty').textContent = matrixCards.length - occupiedCount;
+
+        renderMatrix();
+      } catch (err) {
+        console.error(err);
+        grid.innerHTML = `<p class="col-span-full text-center text-rose-400 font-mono text-xs py-8">Error: ${err.message}</p>`;
+      } finally {
+        loading.classList.add('hidden');
+      }
+    }
+
+    function renderMatrix() {
+      const grid = document.getElementById('locationGrid');
+      const q = (document.getElementById('locSearch').value || '').trim().toLowerCase();
+
+      const list = matrixCards.filter(c => {
+        if (currentFilter === 'occupied' && !c.occupied) return false;
+        if (currentFilter === 'empty' && c.occupied) return false;
+        if (q && !c.name.toLowerCase().includes(q)) return false;
+        return true;
+      });
+
+      grid.innerHTML = '';
+      if (!list.length) {
+        grid.innerHTML = `<p class="col-span-full text-center text-slate-400 py-8 text-sm">ไม่พบช่อง Location ตามตัวกรอง</p>`;
+        return;
+      }
+
+      list.forEach(c => {
+        const el = document.createElement('div');
+        el.className = c.occupied
+          ? 'p-3.5 rounded-xl bg-emerald-500/12 border border-emerald-400/40 shadow-[0_0_18px_rgba(16,185,129,0.12)] hover:border-emerald-300 transition flex flex-col justify-between min-h-[84px]'
+          : 'p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-600 transition flex flex-col justify-between min-h-[84px]';
+
+        el.innerHTML = `
+          <div class="flex items-center justify-between gap-1">
+            <span class="font-mono text-xs font-bold truncate ${c.occupied ? 'text-emerald-200' : 'text-slate-400'}">${c.name}</span>
+            <span class="w-2 h-2 rounded-full shrink-0 ${c.occupied ? 'bg-emerald-400' : 'bg-slate-600'}"></span>
+          </div>
+          <div class="mt-2 text-[11px] font-mono ${c.occupied ? 'text-emerald-300/90' : 'text-slate-500'}">
+            ${c.occupied ? `${c.boxes} กล่อง · ${c.qty} ชิ้น` : 'EMPTY'}
+          </div>
+        `;
+        grid.appendChild(el);
+      });
+    }
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        currentFilter = btn.dataset.filter;
+        document.querySelectorAll('.filter-btn').forEach(b => {
+          b.className = b.dataset.filter === currentFilter
+            ? 'filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-cyan-400 text-slate-950 cursor-pointer'
+            : 'filter-btn px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer';
+        });
+        renderMatrix();
+      });
+    });
+
+    document.getElementById('locSearch').addEventListener('input', renderMatrix);
+    document.addEventListener('DOMContentLoaded', loadLocationMatrix);
+  </script>
 </body>
 </html>
