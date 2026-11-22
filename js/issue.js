@@ -447,36 +447,18 @@ function exportSelectedIssueToXLSX() {
   // กำหนดความกว้างทุกคอลัมน์เป็น 12
   ws['!cols'] = headers.map(() => ({ wch: 12 }));
 
-  // ใส่สีและสไตล์ให้หัวตาราง (แถวที่ 1: คอลัมน์ A - I)
-  const headerStyle = {
-    fill: {
-      patternType: 'solid',
-      fgColor: { rgb: '1E3A8A' } // น้ำเงินเข้ม
-    },
-    font: {
-      name: 'Calibri',
-      sz: 11,
-      bold: true,
-      color: { rgb: 'FFFFFF' } // ตัวอักษรสีขาว
-    },
-    alignment: {
-      horizontal: 'center',
-      vertical: 'center',
-      wrapText: true
-    },
-    border: {
-      top: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
-      right: { style: 'thin', color: { rgb: 'CBD5E1' } }
-    }
-  };
-
-  for (let colIdx = 0; colIdx < headers.length; colIdx++) {
-    const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIdx });
-    if (ws[cellRef]) {
-      ws[cellRef].s = headerStyle;
-    }
+  // ใส่สีให้หัวตารางช่องที่ 1 (A1)
+  if (ws['A1']) {
+    ws['A1'].s = {
+      fill: {
+        patternType: 'solid',
+        fgColor: { rgb: 'D9E1F2' } // สีฟ้าอ่อนสบายตา เปลี่ยนรหัสสี HEX ได้ตามต้องการ
+      },
+      font: {
+        bold: true,
+        color: { rgb: '0F172A' }
+      }
+    };
   }
 
   const wb = XLSX.utils.book_new();
@@ -491,7 +473,7 @@ function exportSelectedIssueToXLSX() {
   ).trim();
   const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_issue';
 
-  XLSX.writeFile(wb, `${safeFileName}.xlsx`, { cellStyles: true });
+  XLSX.writeFile(wb, `${safeFileName}.xlsx`);
   showIssueToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
 }
 
