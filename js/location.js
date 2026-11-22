@@ -29,23 +29,23 @@ function ensureLocationModal() {
   modal.className = 'hidden';
   modal.style.cssText = 'position:fixed;inset:0;z-index:50;';
   modal.innerHTML = `
-    <div onclick="closeLocationModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.72);"></div>
+    <div onclick="closeLocationModal()" style="position:fixed;inset:0;background:rgba(15,23,42,0.55);"></div>
     <div style="position:relative;z-index:10;max-width:720px;margin:64px auto 24px;padding:0 16px;">
-      <div class="panel" style="overflow:hidden;">
-        <div style="padding:18px 20px;border-bottom:1px solid rgba(148,163,184,0.16);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div class="modal-card" style="overflow:hidden;">
+        <div style="padding:18px 20px;border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <div>
-            <div class="mono" style="font-size:11px;color:#34d399;text-transform:uppercase;">Slot Inventory Inspector</div>
-            <h2 id="locModalTitle" class="mono" style="margin:4px 0 0;font-size:18px;font-weight:700;color:#f8fafc;">-</h2>
+            <div class="mono txt-emerald" style="font-size:11px;font-weight:700;text-transform:uppercase;">Slot Inventory Inspector</div>
+            <h2 id="locModalTitle" class="mono txt-primary" style="margin:4px 0 0;font-size:18px;font-weight:700;">-</h2>
           </div>
           <button type="button" onclick="closeLocationModal()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
         </div>
 
-        <div id="locModalSummary" class="mono" style="padding:12px 20px;background:rgba(9,14,26,0.75);border-bottom:1px solid rgba(148,163,184,0.12);display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#cbd5e1;"></div>
+        <div id="locModalSummary" class="mono txt-secondary" style="padding:12px 20px;background:var(--bg-subtle);border-bottom:1px solid var(--border-subtle);display:flex;flex-wrap:wrap;gap:12px;font-size:12px;"></div>
 
         <div id="locModalBody" style="padding:20px;max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
 
-        <div style="padding:14px 20px;border-top:1px solid rgba(148,163,184,0.16);background:rgba(9,14,26,0.55);display:flex;align-items:center;justify-content:space-between;gap:12px;">
-          <a href="index.html" class="mono" style="font-size:12px;color:#67e8f9;text-decoration:none;">← กลับหน้า Dashboard</a>
+        <div style="padding:14px 20px;border-top:1px solid var(--border-subtle);background:var(--bg-table-head);display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <a href="index.html" class="mono txt-cyan" style="font-size:12px;font-weight:600;text-decoration:none;">← กลับหน้า Dashboard</a>
           <button type="button" onclick="closeLocationModal()" class="btn btn-ghost">ปิดหน้าต่าง</button>
         </div>
       </div>
@@ -61,18 +61,16 @@ function openLocationModal(card) {
 
   const summaryEl = document.getElementById('locModalSummary');
   summaryEl.innerHTML = `
-    <span style="padding:4px 10px;border-radius:8px;background:${
-      card.occupied ? 'rgba(16,185,129,0.16)' : 'rgba(30,41,59,0.85)'
-    };color:${card.occupied ? '#6ee7b7' : '#94a3b8'};">${card.occupied ? 'สถานะ: มีของ' : 'สถานะ: ว่าง'}</span>
-    <span>จำนวนกล่อง: <strong style="color:#f8fafc;">${card.boxes.toLocaleString()}</strong></span>
-    <span>ยอดรวมคงเหลือ: <strong style="color:#6ee7b7;">${card.qty.toLocaleString()}</strong></span>
+    <span class="${card.occupied ? 'status-pill-active' : 'status-pill-empty'}">${card.occupied ? 'สถานะ: มีของ' : 'สถานะ: ว่าง'}</span>
+    <span>จำนวนกล่อง: <strong class="txt-primary">${card.boxes.toLocaleString()}</strong></span>
+    <span>ยอดรวมคงเหลือ: <strong class="txt-emerald">${card.qty.toLocaleString()}</strong></span>
   `;
 
   const bodyEl = document.getElementById('locModalBody');
   if (!card.items || card.items.length === 0) {
     bodyEl.innerHTML = `
-      <div style="padding:36px 12px;text-align:center;color:#94a3b8;font-size:14px;">
-        ไม่มีรายการกล่องจัดเก็บในช่อง <span class="mono" style="color:#f8fafc;">${escapeHtml(card.name)}</span>
+      <div class="txt-muted" style="padding:36px 12px;text-align:center;font-size:14px;">
+        ไม่มีรายการกล่องจัดเก็บในช่อง <span class="mono txt-primary" style="font-weight:600;">${escapeHtml(card.name)}</span>
       </div>
     `;
   } else {
@@ -84,17 +82,17 @@ function openLocationModal(card) {
         const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
 
         return `
-          <div style="padding:14px;border-radius:12px;background:rgba(9,14,26,0.85);border:1px solid rgba(51,65,85,0.75);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;">
+          <div class="detail-row" style="align-items:center;flex-wrap:wrap;">
             <div>
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
-                <span class="mono" style="font-size:12.5px;font-weight:700;color:#67e8f9;">${escapeHtml(boxId)}</span>
-                <span class="mono" style="font-size:12px;color:#94a3b8;">LOT: ${escapeHtml(lotNo)}</span>
+                <span class="mono txt-cyan" style="font-size:12.5px;font-weight:700;">${escapeHtml(boxId)}</span>
+                <span class="mono txt-muted" style="font-size:12px;">LOT: ${escapeHtml(lotNo)}</span>
               </div>
-              <div style="font-size:14px;font-weight:500;color:#f8fafc;">${escapeHtml(partName)}</div>
+              <div class="txt-primary" style="font-size:14px;font-weight:600;">${escapeHtml(partName)}</div>
             </div>
             <div class="mono" style="text-align:right;">
-              <div style="font-size:11px;color:#94a3b8;">QTY BALANCE</div>
-              <div style="font-size:16px;font-weight:700;color:${qty > 0 ? '#6ee7b7' : '#64748b'};">${qty.toLocaleString()}</div>
+              <div class="txt-muted" style="font-size:11px;">QTY BALANCE</div>
+              <div class="${qty > 0 ? 'txt-emerald' : 'txt-muted'}" style="font-size:16px;font-weight:700;">${qty.toLocaleString()}</div>
             </div>
           </div>
         `;
@@ -167,7 +165,7 @@ async function loadLocationMatrix() {
   } catch (err) {
     console.error('Location Matrix Error:', err);
     if (grid) {
-      grid.innerHTML = `<div class="mono" style="grid-column:1/-1;text-align:center;color:#fda4af;font-size:12px;padding:32px 12px;">Error: ${escapeHtml(err.message)}</div>`;
+      grid.innerHTML = `<div class="mono" style="grid-column:1/-1;text-align:center;color:#e11d48;font-size:12px;padding:32px 12px;">Error: ${escapeHtml(err.message)}</div>`;
     }
   } finally {
     loading?.classList.add('hidden');
@@ -190,7 +188,7 @@ function renderMatrix() {
 
   grid.innerHTML = '';
   if (!list.length) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:#94a3b8;padding:32px 12px;font-size:14px;">ไม่พบช่อง Location ตามตัวกรอง</div>`;
+    grid.innerHTML = `<div class="txt-muted" style="grid-column:1/-1;text-align:center;padding:32px 12px;font-size:14px;">ไม่พบช่อง Location ตามตัวกรอง</div>`;
     return;
   }
 
@@ -205,14 +203,12 @@ function renderMatrix() {
 
     el.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
-        <span class="mono" style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${
-          c.occupied ? '#a7f3d0' : '#cbd5e1'
-        };">${escapeHtml(c.name)}</span>
+        <span class="mono slot-title" style="font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(c.name)}</span>
         <span style="width:8px;height:8px;border-radius:999px;flex-shrink:0;background:${
-          c.occupied ? '#34d399' : '#64748b'
+          c.occupied ? 'var(--c-emerald)' : 'var(--text-placeholder)'
         };"></span>
       </div>
-      <div class="mono" style="margin-top:8px;font-size:11px;color:${c.occupied ? '#6ee7b7' : '#64748b'};">
+      <div class="mono slot-sub" style="margin-top:8px;font-size:11px;font-weight:600;">
         ${c.occupied ? `${c.boxes} กล่อง · ${c.qty.toLocaleString()} ชิ้น` : 'EMPTY'}
       </div>
     `;

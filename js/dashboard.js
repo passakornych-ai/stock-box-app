@@ -28,7 +28,7 @@ function showToast(message) {
     toast.id = 'toastBox';
     toast.className = 'mono';
     toast.style.cssText =
-      'position:fixed;bottom:20px;right:20px;z-index:60;padding:10px 16px;border-radius:12px;background:#0f172a;border:1px solid rgba(34,211,238,0.5);color:#67e8f9;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,0.45);';
+      'position:fixed;bottom:20px;right:20px;z-index:60;padding:10px 16px;border-radius:11px;background:var(--bg-surface);border:1px solid var(--c-cyan);color:var(--c-cyan);font-size:12px;font-weight:600;box-shadow:0 12px 28px rgba(0,0,0,0.22);';
     document.body.appendChild(toast);
   }
   toast.textContent = message;
@@ -109,9 +109,9 @@ function updateSortIndicators() {
     let arrow = ' ↕';
     if (sortState.key === key) {
       arrow = sortState.dir === 'asc' ? ' ↑' : ' ↓';
-      th.style.color = '#67e8f9';
+      th.style.color = 'var(--c-cyan)';
     } else {
-      th.style.color = '#94a3b8';
+      th.style.color = 'var(--text-muted)';
     }
     th.textContent = `${baseLabels[index]}${arrow}`;
   });
@@ -127,7 +127,7 @@ async function loadDashboard() {
   try {
     const client = getClient();
     if (!client) {
-      throw new Error('ยังไม่ได้ khởiสร้าง Supabase client (_supabase) กรุณาเช็กไฟล์ js/config.js');
+      throw new Error('ยังไม่ได้สร้าง Supabase client (_supabase) กรุณาเช็กไฟล์ js/config.js');
     }
 
     const { data, error } = await client.from('stock_box').select('*');
@@ -144,23 +144,24 @@ async function loadDashboard() {
     if (statusTextEl) statusTextEl.textContent = 'เชื่อมต่อ Supabase สำเร็จ';
 
     if (badge) {
-      badge.style.background = 'rgba(16, 185, 129, 0.14)';
-      badge.style.color = '#6ee7b7';
-      badge.style.borderColor = 'rgba(52, 211, 153, 0.35)';
+      badge.className = 'mono status-pill-active';
+      badge.style.padding = '2px 9px';
+      badge.style.fontSize = '11px';
       badge.textContent = '● LIVE';
     }
   } catch (err) {
     console.error('Dashboard Error:', err);
     if (badge) {
-      badge.style.background = 'rgba(244, 63, 94, 0.16)';
-      badge.style.color = '#fda4af';
-      badge.style.borderColor = 'rgba(251, 113, 133, 0.4)';
+      badge.className = 'mono status-pill-empty';
+      badge.style.padding = '2px 9px';
+      badge.style.fontSize = '11px';
+      badge.style.color = '#e11d48';
       badge.textContent = '● ERROR';
     }
     const statusTextEl = document.getElementById('kpiStatusText');
     if (statusTextEl) statusTextEl.textContent = err.message || 'โหลดข้อมูลไม่สำเร็จ';
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="6" style="padding:40px 16px;text-align:center;color:#fda4af;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeHtml(err.message)}</td></tr>`;
     }
   } finally {
     loading?.classList.add('hidden');
@@ -240,7 +241,7 @@ function renderTable(rows) {
   if (!tbody) return;
 
   if (currentFilteredRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="padding:44px 16px;text-align:center;color:#94a3b8;">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
     return;
   }
 
@@ -263,28 +264,23 @@ function renderTable(rows) {
     const jsSafeBoxId = String(boxId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     tr.innerHTML = `
-      <td class="mono" style="font-weight:600;color:#67e8f9;">
+      <td class="mono txt-cyan" style="font-weight:700;">
         <div style="display:inline-flex;align-items:center;gap:8px;">
           <span>${safeBoxId}</span>
-          <button type="button" onclick="copyText(event, '${jsSafeBoxId}')"
-            style="padding:2px 8px;border-radius:6px;background:#1e293b;color:#cbd5e1;border:1px solid rgba(148,163,184,0.2);font-size:11px;cursor:pointer;">Copy</button>
+          <button type="button" onclick="copyText(event, '${jsSafeBoxId}')" class="btn btn-ghost"
+            style="padding:2px 8px;border-radius:6px;font-size:11px;">Copy</button>
         </div>
       </td>
-      <td style="font-weight:500;color:#f8fafc;">${safePartName}</td>
-      <td class="mono" style="font-size:12.5px;color:#cbd5e1;">${safeLotNo}</td>
+      <td class="txt-primary" style="font-weight:600;">${safePartName}</td>
+      <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
       <td>
-        <a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()"
-          class="mono" style="display:inline-block;padding:4px 10px;border-radius:8px;font-size:12px;text-decoration:none;background:rgba(99,102,241,0.16);color:#c7d2fe;border:1px solid rgba(129,140,248,0.3);">
+        <a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()" class="mono loc-pill">
           ${safeLoc} ↗
         </a>
       </td>
-      <td class="mono" style="text-align:right;font-weight:700;color:${qty > 0 ? '#6ee7b7' : '#64748b'};">${qty.toLocaleString()}</td>
+      <td class="mono ${qty > 0 ? 'txt-emerald' : 'txt-muted'}" style="text-align:right;font-weight:700;">${qty.toLocaleString()}</td>
       <td style="text-align:center;">
-        <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;background:${
-          qty > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(30,41,59,0.9)'
-        };color:${qty > 0 ? '#6ee7b7' : '#94a3b8'};border:1px solid ${
-          qty > 0 ? 'rgba(52,211,153,0.35)' : 'rgba(71,85,105,0.5)'
-        };">${qty > 0 ? 'พร้อมใช้' : 'หมด'}</span>
+        <span class="${qty > 0 ? 'status-pill-active' : 'status-pill-empty'}">${qty > 0 ? 'พร้อมใช้' : 'หมด'}</span>
       </td>
     `;
     tbody.appendChild(tr);
@@ -300,9 +296,9 @@ function openDrawerByIndex(index) {
   dl.innerHTML = Object.entries(item)
     .map(
       ([key, val]) => `
-      <div style="padding:12px;border-radius:12px;background:rgba(9,14,26,0.85);border:1px solid rgba(51,65,85,0.7);display:flex;justify-content:space-between;gap:12px;">
-        <dt class="mono" style="font-size:12px;color:#94a3b8;">${escapeHtml(key)}</dt>
-        <dd class="mono" style="font-size:12px;color:#f8fafc;text-align:right;word-break:break-all;margin:0;">${escapeHtml(val ?? '-')}</dd>
+      <div class="detail-row">
+        <dt class="mono txt-muted" style="font-size:12px;">${escapeHtml(key)}</dt>
+        <dd class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;margin:0;">${escapeHtml(val ?? '-')}</dd>
       </div>
     `
     )
