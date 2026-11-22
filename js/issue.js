@@ -1,6 +1,8 @@
 let allIssueRows = [];
 let currentFilteredIssueRows = [];
 let issueDetailRows = [];
+let selectedIssueItem = null;
+let selectedIssueDetails = [];
 let issueSortState = { key: null, dir: 'desc' };
 
 const getIssueClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
@@ -339,6 +341,7 @@ function openIssueDrawerByIndex(index) {
   const item = currentFilteredIssueRows[index];
   if (!item) return;
 
+  selectedIssueItem = item;
   const issId = String(pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '-'));
   document.getElementById('issueDrawerTitle').textContent = issId;
 
@@ -354,13 +357,13 @@ function openIssueDrawerByIndex(index) {
     )
     .join('');
 
-  const matchedDetails = issueDetailRows.filter(
+  selectedIssueDetails = issueDetailRows.filter(
     (d) => String(pickIssueField(d, ['IssueID', 'issue_id', 'Issue_ID'], '')).trim() === issId.trim()
   );
 
   let detailsSectionHtml = '';
-  if (matchedDetails.length > 0) {
-    const detailCards = matchedDetails
+  if (selectedIssueDetails.length > 0) {
+    const detailCards = selectedIssueDetails
       .map(
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
@@ -376,11 +379,17 @@ function openIssueDrawerByIndex(index) {
     detailsSectionHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
         <div class="mono txt-amber" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-          Detail Items (${matchedDetails.length})
+          Detail Items (${selectedIssueDetails.length})
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">${detailCards}</div>
       </div>
     `;
+  }
+
+  const exportBtn = document.getElementById('exportIssueXlsxBtn');
+  if (exportBtn) {
+    exportBtn.disabled = selectedIssueDetails.length === 0;
+    exportBtn.style.opacity = selectedIssueDetails.length === 0 ? '0.5' : '1';
   }
 
   document.getElementById('issueDrawerContent').innerHTML = fieldsHtml + detailsSectionHtml;
@@ -391,39 +400,63 @@ function closeIssueDrawer() {
   document.getElementById('issueDrawer')?.classList.add('hidden');
 }
 
-function exportIssueToCSV() {
-  if (!currentFilteredIssueRows.length) {
-    showIssueToast('ไม่มีข้อมูลสำหรับ Export');
+function exportSelectedIssueToXLSX() {
+  if (!selectedIssueItem) {
+    showIssueToast('กรุณาเลือกรายการใบเบิกก่อน');
     return;
   }
 
-  const headers = ['IssueID', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
-  const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+  if (!selectedIssueDetails.length) {
+    showIssueToast('ใบเบิกนี้ไม่มี Detail Items สำหรับ Export');
+    return;
+  }
 
-  const lines = [
-    headers.map(escapeCSV).join(','),
-    ...currentFilteredIssueRows.map((item) => {
-      const issId = pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID']);
-      const issDate = pickIssueField(item, ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at']);
-      const lotNo = pickIssueField(item, ['LotNo', 'lot_no', 'Lot_No']);
-      const partName = pickIssueField(item, ['Part_Name', 'part_name', 'Product']);
-      const loc = pickIssueField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'From_Location']);
-      const qty = Number(item.__computedQty) || 0;
-      return [issId, issDate, lotNo, partName, loc, qty].map(escapeCSV).join(',');
-    })
+  if (typeof XLSX === 'undefined') {
+    showIssueToast('ไม่พบไลบรารี XLSX กรุณารีเฟรชหน้า');
+    return;
+  }
+
+  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
+
+  const excelRows = selectedIssueDetails.map((d) => ({
+    order: cleanVal(pickIssueField(d, ['Order_Number', 'order_number', 'Order', 'order'], '-')),
+    "s'tag": cleanVal(pickIssueField(d, ['Service_Tag', 'service_tag', "s'tag", 's_tag'], '-')),
+    box: cleanVal(pickIssueField(d, ['Part_Name', 'part_name', 'box', 'Box', 'Product'], '-')),
+    location: cleanVal(pickIssueField(d, ['Location_Name', 'location_name', 'location', 'Location'], '-')),
+    Remarks: cleanVal(pickIssueField(d, ['Remark', 'remark', 'Remarks', 'remarks'], '-')),
+    เป่าสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Blow', 'blow', 'เป่าสติ๊กเกอร์'], '-')),
+    ติดสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Stick', 'stick', 'ติดสติ๊กเกอร์'], '-')),
+    เปลี่ยนกล่อง: cleanVal(pickIssueField(d, ['Change', 'change', 'เปลี่ยนกล่อง'], '-')),
+    หยิบกล่อง: cleanVal(pickIssueField(d, ['Pull', 'pull', 'หยิบกล่อง'], '-'))
+  }));
+
+  const headers = [
+    'order',
+    "s'tag",
+    'box',
+    'location',
+    'Remarks',
+    'เป่าสติ๊กเกอร์',
+    'ติดสติ๊กเกอร์',
+    'เปลี่ยนกล่อง',
+    'หยิบกล่อง'
   ];
 
-  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `stock_issue_${stamp}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showIssueToast(`EXPORTED ${currentFilteredIssueRows.length} ROWS`);
+  const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  const rawDocName = String(
+    pickIssueField(
+      selectedIssueItem,
+      ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
+      'stock_issue'
+    )
+  ).trim();
+  const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_issue';
+
+  XLSX.writeFile(wb, `${safeFileName}.xlsx`);
+  showIssueToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
