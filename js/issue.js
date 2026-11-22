@@ -418,18 +418,6 @@ function exportSelectedIssueToXLSX() {
 
   const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
 
-  const excelRows = selectedIssueDetails.map((d) => ({
-    order: cleanVal(pickIssueField(d, ['Order_Number', 'order_number', 'Order', 'order'], '-')),
-    "s'tag": cleanVal(pickIssueField(d, ['Service_Tag', 'service_tag', "s'tag", 's_tag'], '-')),
-    box: cleanVal(pickIssueField(d, ['Part_Name', 'part_name', 'box', 'Box', 'Product'], '-')),
-    location: cleanVal(pickIssueField(d, ['Location_Name', 'location_name', 'location', 'Location'], '-')),
-    Remarks: cleanVal(pickIssueField(d, ['Remark', 'remark', 'Remarks', 'remarks'], '-')),
-    เป่าสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Blow', 'blow', 'เป่าสติ๊กเกอร์'], '-')),
-    ติดสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Stick', 'stick', 'ติดสติ๊กเกอร์'], '-')),
-    เปลี่ยนกล่อง: cleanVal(pickIssueField(d, ['Change', 'change', 'เปลี่ยนกล่อง'], '-')),
-    หยิบกล่อง: cleanVal(pickIssueField(d, ['Pull', 'pull', 'หยิบกล่อง'], '-'))
-  }));
-
   const headers = [
     'order',
     "s'tag",
@@ -442,7 +430,39 @@ function exportSelectedIssueToXLSX() {
     'หยิบกล่อง'
   ];
 
+  const excelRows = selectedIssueDetails.map((d) => ({
+    order: cleanVal(pickIssueField(d, ['Order_Number', 'order_number', 'Order', 'order'], '-')),
+    "s'tag": cleanVal(pickIssueField(d, ['Service_Tag', 'service_tag', "s'tag", 's_tag'], '-')),
+    box: cleanVal(pickIssueField(d, ['Part_Name', 'part_name', 'box', 'Box', 'Product'], '-')),
+    location: cleanVal(pickIssueField(d, ['Location_Name', 'location_name', 'location', 'Location'], '-')),
+    Remarks: cleanVal(pickIssueField(d, ['Remark', 'remark', 'Remarks', 'remarks'], '-')),
+    เป่าสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Blow', 'blow', 'เป่าสติ๊กเกอร์'], '-')),
+    ติดสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Stick', 'stick', 'ติดสติ๊กเกอร์'], '-')),
+    เปลี่ยนกล่อง: cleanVal(pickIssueField(d, ['Change', 'change', 'เปลี่ยนกล่อง'], '-')),
+    หยิบกล่อง: cleanVal(pickIssueField(d, ['Pull', 'pull', 'หยิบกล่อง'], '-'))
+  }));
+
   const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
+
+  // คำนวณความกว้างคอลัมน์อัตโนมัติ (เผื่อภาษาไทยและเว้นระยะหายใจ)
+  const calcVisualWidth = (val) => {
+    const str = String(val ?? '');
+    let width = 0;
+    for (const ch of str) {
+      width += /[\u0E00-\u0E7F]/.test(ch) ? 1.85 : 1.15;
+    }
+    return Math.ceil(width);
+  };
+
+  ws['!cols'] = headers.map((colName) => {
+    let maxLen = calcVisualWidth(colName);
+    excelRows.forEach((row) => {
+      const len = calcVisualWidth(row[colName]);
+      if (len > maxLen) maxLen = len;
+    });
+    return { wch: Math.min(Math.max(maxLen + 4, 12), 45) };
+  });
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
 
