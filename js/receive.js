@@ -1,0 +1,431 @@
+let allReceiveRows = [];
+let currentFilteredRows = [];
+let receiveDetailRows = [];
+let sortState = { key: null, dir: 'desc' };
+
+const getClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
+
+const pickField = (obj, keys, fallback = '-') => {
+  for (const k of keys) {
+    if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') {
+      return obj[k];
+    }
+  }
+  return fallback;
+};
+
+const escapeHtml = (str) =>
+  String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+function showToast(message) {
+  let toast = document.getElementById('toastBox');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toastBox';
+    toast.className = 'mono';
+    toast.style.cssText =
+      'position:fixed;bottom:20px;right:20px;z-index:60;padding:10px 16px;border-radius:11px;background:var(--bg-surface);border:1px solid var(--c-cyan);color:var(--c-cyan);font-size:12px;font-weight:600;box-shadow:0 12px 28px rgba(0,0,0,0.22);';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.remove('hidden');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 2200);
+}
+
+function copyText(event, text) {
+  event.stopPropagation();
+  if (!text || text === '-') return;
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(String(text));
+  }
+  showToast(`COPIED: ${text}`);
+}
+
+function clearReceiveFilters() {
+  const searchInput = document.getElementById('receiveSearchInput');
+  const searchColumn = document.getElementById('receiveSearchColumn');
+  const dateFilter = document.getElementById('receiveDateFilter');
+
+  if (searchInput) searchInput.value = '';
+  if (searchColumn) searchColumn.value = 'all';
+  if (dateFilter) dateFilter.value = '';
+  sortState = { key: null, dir: 'desc' };
+
+  renderReceiveTable(allReceiveRows);
+}
+
+function getReceiveColumnValue(item, colKey) {
+  const map = {
+    ReceiveID: ['ReceiveID', 'receive_id', 'Receive_ID', 'ID', 'Row ID'],
+    ReceiveDate: ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at'],
+    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
+    Part_Name: ['Part_Name', 'part_name', 'Product'],
+    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id'],
+    Qty: ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'QtyBalance', 'qty_balance']
+  };
+  const val = pickField(item, map[colKey] || [colKey], '');
+  if (colKey === 'Qty') {
+    return Number(val) || 0;
+  }
+  return String(val === '-' ? '' : val).toLowerCase();
+}
+
+function sortReceiveByColumn(colKey) {
+  if (sortState.key === colKey) {
+    sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortState.key = colKey;
+    sortState.dir = colKey === 'Qty' || colKey === 'ReceiveDate' ? 'desc' : 'asc';
+  }
+  renderReceiveTable(allReceiveRows);
+}
+
+function initReceiveSortableHeaders() {
+  const ths = document.querySelectorAll('.data-table thead th');
+  const keyByIndex = ['ReceiveID', 'ReceiveDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+
+  ths.forEach((th, index) => {
+    const key = keyByIndex[index];
+    if (!key) return;
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
+    th.title = 'คลิกเพื่อเรียงลำดับ';
+    th.onclick = () => sortReceiveByColumn(key);
+  });
+}
+
+function updateReceiveSortIndicators() {
+  const ths = document.querySelectorAll('.data-table thead th');
+  const keyByIndex = ['ReceiveID', 'ReceiveDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+  const baseLabels = ['RECEIVE ID', 'RECEIVE DATE', 'LOTNO', 'PART_NAME', 'LOCATION', 'QTY'];
+
+  ths.forEach((th, index) => {
+    const key = keyByIndex[index];
+    if (!key) return;
+    let arrow = ' ↕';
+    if (sortState.key === key) {
+      arrow = sortState.dir === 'asc' ? ' ↑' : ' ↓';
+      th.style.color = 'var(--c-cyan)';
+    } else {
+      th.style.color = 'var(--text-muted)';
+    }
+    th.textContent = `${baseLabels[index]}${arrow}`;
+  });
+}
+
+async function loadStockReceive() {
+  const loading = document.getElementById('receiveLoadingBanner');
+  const tbody = document.getElementById('receiveTableBody');
+  const badge = document.getElementById('receiveStatusBadge');
+
+  loading?.classList.remove('hidden');
+
+  try {
+    const client = getClient();
+    if (!client) {
+      throw new Error('ยังไม่ได้สร้าง Supabase client (_supabase) กรุณาเช็กไฟล์ js/config.js');
+    }
+
+    const [{ data: recData, error: recErr }, { data: detData, error: detErr }] = await Promise.all([
+      client.from('stock_receive').select('*'),
+      client.from('stock_receive_detail').select('*')
+    ]);
+
+    if (recErr) throw recErr;
+    receiveDetailRows = !detErr && Array.isArray(detData) ? detData : [];
+
+    // จับคู่ยอดรวมจาก stock_receive_detail หากหัวใบรับเข้าไม่มีตัวเลข Qty โดยตรง
+    const detailSumByRecId = {};
+    receiveDetailRows.forEach((d) => {
+      const rid = String(pickField(d, ['ReceiveID', 'receive_id', 'Receive_ID'], '')).trim();
+      const dQty = Number(pickField(d, ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'QtyBalance'], 0)) || 0;
+      if (!rid) return;
+      detailSumByRecId[rid] = (detailSumByRecId[rid] || 0) + dQty;
+    });
+
+    allReceiveRows = (Array.isArray(recData) ? recData : []).map((row) => {
+      const rid = String(pickField(row, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'], '')).trim();
+      const rawQty = pickField(row, ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'TotalQty', 'QtyBalance'], null);
+      const computedQty =
+        rawQty !== null && rawQty !== '-' && !Number.isNaN(Number(rawQty))
+          ? Number(rawQty)
+          : detailSumByRecId[rid] || 0;
+
+      return {
+        ...row,
+        __computedQty: computedQty
+      };
+    });
+
+    updateReceiveKPIs(allReceiveRows);
+    renderReceiveTable(allReceiveRows);
+
+    const now = new Date();
+    const lastSyncEl = document.getElementById('recKpiLastSync');
+    const statusTextEl = document.getElementById('recKpiStatusText');
+    if (lastSyncEl) lastSyncEl.textContent = now.toLocaleTimeString('th-TH', { hour12: false });
+    if (statusTextEl) statusTextEl.textContent = 'เชื่อมต่อ Supabase สำเร็จ';
+
+    if (badge) {
+      badge.className = 'mono status-pill-active';
+      badge.style.padding = '2px 9px';
+      badge.style.fontSize = '11px';
+      badge.textContent = '● LIVE';
+    }
+  } catch (err) {
+    console.error('Stock Receive Error:', err);
+    if (badge) {
+      badge.className = 'mono status-pill-empty';
+      badge.style.padding = '2px 9px';
+      badge.style.fontSize = '11px';
+      badge.style.color = '#e11d48';
+      badge.textContent = '● ERROR';
+    }
+    const statusTextEl = document.getElementById('recKpiStatusText');
+    if (statusTextEl) statusTextEl.textContent = err.message || 'โหลดข้อมูลไม่สำเร็จ';
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  } finally {
+    loading?.classList.add('hidden');
+  }
+}
+
+function updateReceiveKPIs(rows) {
+  let totalQty = 0;
+  let todayCount = 0;
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  rows.forEach((r) => {
+    totalQty += Number(r.__computedQty) || 0;
+    const rawDate = String(pickField(r, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at'], ''));
+    if (rawDate.slice(0, 10) === todayStr) {
+      todayCount += 1;
+    }
+  });
+
+  document.getElementById('recKpiTotalDocs').textContent = rows.length.toLocaleString();
+  document.getElementById('recKpiTotalQty').textContent = totalQty.toLocaleString();
+  document.getElementById('recKpiTodayDocs').textContent = todayCount.toLocaleString();
+}
+
+function getFilteredReceiveRows(rows) {
+  const col = document.getElementById('receiveSearchColumn')?.value || 'all';
+  const q = (document.getElementById('receiveSearchInput')?.value || '').trim().toLowerCase();
+  const dateVal = (document.getElementById('receiveDateFilter')?.value || '').trim();
+  const clearBtn = document.getElementById('clearReceiveSearchBtn');
+
+  if (clearBtn) {
+    clearBtn.classList.toggle('hidden', !q && col === 'all' && !dateVal && !sortState.key);
+  }
+
+  const colKeyMap = {
+    ReceiveID: ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'],
+    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
+    Part_Name: ['Part_Name', 'part_name', 'Product'],
+    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id']
+  };
+
+  let result = rows.filter((r) => {
+    if (dateVal) {
+      const rawDate = String(pickField(r, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at'], ''));
+      if (!rawDate.startsWith(dateVal)) return false;
+    }
+
+    if (!q) return true;
+
+    if (col === 'all') {
+      return JSON.stringify(r).toLowerCase().includes(q);
+    }
+
+    const targetVal = String(pickField(r, colKeyMap[col] || [col], '')).toLowerCase();
+    return targetVal.includes(q);
+  });
+
+  if (sortState.key) {
+    const { key, dir } = sortState;
+    const factor = dir === 'asc' ? 1 : -1;
+    result = [...result].sort((a, b) => {
+      if (key === 'Qty') {
+        return ((Number(a.__computedQty) || 0) - (Number(b.__computedQty) || 0)) * factor;
+      }
+      const valA = getReceiveColumnValue(a, key);
+      const valB = getReceiveColumnValue(b, key);
+      return String(valA).localeCompare(String(valB), undefined, { numeric: true }) * factor;
+    });
+  }
+
+  return result;
+}
+
+function renderReceiveTable(rows) {
+  const tbody = document.getElementById('receiveTableBody');
+  currentFilteredRows = getFilteredReceiveRows(rows);
+  updateReceiveSortIndicators();
+  document.getElementById('receiveShowingCount').textContent = currentFilteredRows.length.toLocaleString();
+
+  if (!tbody) return;
+
+  if (currentFilteredRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบรายการรับเข้าตามเงื่อนไข</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  currentFilteredRows.forEach((item, idx) => {
+    const recId = pickField(item, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
+    const recDate = pickField(item, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at']);
+    const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
+    const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
+    const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id']);
+    const qty = Number(item.__computedQty) || 0;
+
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => openReceiveDrawerByIndex(idx);
+
+    const safeRecId = escapeHtml(recId);
+    const safeRecDate = escapeHtml(recDate);
+    const safeLotNo = escapeHtml(lotNo);
+    const safePartName = escapeHtml(partName);
+    const safeLoc = escapeHtml(loc);
+    const jsSafeRecId = String(recId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+    tr.innerHTML = `
+      <td class="mono txt-cyan" style="font-weight:700;">
+        <div style="display:inline-flex;align-items:center;gap:8px;">
+          <span>${safeRecId}</span>
+          <button type="button" onclick="copyText(event, '${jsSafeRecId}')" class="btn btn-ghost"
+            style="padding:2px 8px;border-radius:6px;font-size:11px;">Copy</button>
+        </div>
+      </td>
+      <td class="mono txt-secondary" style="font-size:12.5px;">${safeRecDate}</td>
+      <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
+      <td class="txt-primary" style="font-weight:600;">${safePartName}</td>
+      <td>
+        ${
+          loc !== '-'
+            ? `<a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()" class="mono loc-pill">${safeLoc} ↗</a>`
+            : `<span class="txt-muted">-</span>`
+        }
+      </td>
+      <td class="mono txt-emerald" style="text-align:right;font-weight:700;">+${qty.toLocaleString()}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openReceiveDrawerByIndex(index) {
+  const item = currentFilteredRows[index];
+  if (!item) return;
+
+  const recId = String(pickField(item, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'], '-'));
+  document.getElementById('receiveDrawerTitle').textContent = recId;
+
+  const cleanEntries = Object.entries(item).filter(([k]) => !k.startsWith('__'));
+  const fieldsHtml = cleanEntries
+    .map(
+      ([key, val]) => `
+      <div class="detail-row">
+        <dt class="mono txt-muted" style="font-size:12px;">${escapeHtml(key)}</dt>
+        <dd class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;margin:0;">${escapeHtml(val ?? '-')}</dd>
+      </div>
+    `
+    )
+    .join('');
+
+  const matchedDetails = receiveDetailRows.filter(
+    (d) => String(pickField(d, ['ReceiveID', 'receive_id', 'Receive_ID'], '')).trim() === recId.trim()
+  );
+
+  let detailsSectionHtml = '';
+  if (matchedDetails.length > 0) {
+    const detailCards = matchedDetails
+      .map((d) => {
+        const dPart = pickField(d, ['Part_Name', 'part_name', 'Product', 'StockBoxID']);
+        const dLot = pickField(d, ['LotNo', 'lot_no', 'Lot_No']);
+        const dQty = Number(pickField(d, ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'QtyBalance'], 0)) || 0;
+        return `
+          <div class="detail-row" style="align-items:center;">
+            <div>
+              <div class="txt-primary" style="font-size:13px;font-weight:600;">${escapeHtml(dPart)}</div>
+              <div class="mono txt-muted" style="font-size:11.5px;">LOT: ${escapeHtml(dLot)}</div>
+            </div>
+            <div class="mono txt-emerald" style="font-size:14px;font-weight:700;">+${dQty.toLocaleString()}</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    detailsSectionHtml = `
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
+        <div class="mono txt-emerald" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:8px;">
+          Detail Items (${matchedDetails.length})
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">${detailCards}</div>
+      </div>
+    `;
+  }
+
+  document.getElementById('receiveDrawerContent').innerHTML = fieldsHtml + detailsSectionHtml;
+  document.getElementById('receiveDrawer').classList.remove('hidden');
+}
+
+function closeReceiveDrawer() {
+  document.getElementById('receiveDrawer')?.classList.add('hidden');
+}
+
+function exportReceiveToCSV() {
+  if (!currentFilteredRows.length) {
+    showToast('ไม่มีข้อมูลสำหรับ Export');
+    return;
+  }
+
+  const headers = ['ReceiveID', 'ReceiveDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+  const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+
+  const lines = [
+    headers.map(escapeCSV).join(','),
+    ...currentFilteredRows.map((item) => {
+      const recId = pickField(item, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
+      const recDate = pickField(item, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at']);
+      const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
+      const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
+      const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id']);
+      const qty = Number(item.__computedQty) || 0;
+      return [recId, recDate, lotNo, partName, loc, qty].map(escapeCSV).join(',');
+    })
+  ];
+
+  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `stock_receive_${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`EXPORTED ${currentFilteredRows.length} ROWS`);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initReceiveSortableHeaders();
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeReceiveDrawer();
+  });
+
+  document.getElementById('receiveSearchInput')?.addEventListener('input', () => renderReceiveTable(allReceiveRows));
+  document.getElementById('receiveSearchColumn')?.addEventListener('change', () => renderReceiveTable(allReceiveRows));
+  document.getElementById('receiveDateFilter')?.addEventListener('change', () => renderReceiveTable(allReceiveRows));
+
+  loadStockReceive();
+});

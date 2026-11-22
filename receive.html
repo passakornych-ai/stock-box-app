@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STOCK BOX OS // Stock Receive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="js/theme.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-container" style="height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="display:flex;align-items:center;gap:12px;min-width:0;">
+        <div style="width:40px;height:40px;border-radius:12px;background:var(--c-emerald-soft-bg);border:1px solid var(--c-emerald-soft-border);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
+          📥
+        </div>
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h1 class="txt-primary" style="margin:0;font-size:17px;font-weight:700;">
+              STOCK <span class="mono txt-emerald" style="font-size:13px;">RECEIVE</span>
+            </h1>
+            <span id="receiveStatusBadge" class="mono status-pill-active" style="padding:2px 9px;font-size:11px;">
+              ● LIVE
+            </span>
+          </div>
+          <p class="txt-muted" style="margin:2px 0 0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            รายการรับเข้าสินค้าเข้าสู่คลังแบบเรียลไทม์
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="btn btn-ghost">
+          <span>☀️</span>
+          <span>โหมดสว่าง</span>
+        </button>
+        <a href="index.html" class="btn btn-ghost">
+          <span>←</span>
+          <span>สต็อกคงเหลือ</span>
+        </a>
+        <a href="location.html" class="btn btn-indigo-soft">
+          <span>📍</span>
+          <span>ผัง Location</span>
+        </a>
+        <button type="button" onclick="loadStockReceive()" class="btn btn-emerald">
+          <span>↻</span>
+          <span>รีเฟรช</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container" style="padding-top:24px;padding-bottom:40px;display:flex;flex-direction:column;gap:20px;">
+
+    <!-- KPI Cards -->
+    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Receive Records</span>
+          <span class="txt-cyan">●</span>
+        </div>
+        <div id="recKpiTotalDocs" class="mono txt-primary" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">จำนวนรายการรับเข้าทั้งหมด</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Total Received Qty</span>
+          <span class="txt-emerald">●</span>
+        </div>
+        <div id="recKpiTotalQty" class="mono txt-emerald" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">ยอดรวมจำนวนที่รับเข้า</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Today Records</span>
+          <span class="txt-indigo">●</span>
+        </div>
+        <div id="recKpiTodayDocs" class="mono txt-indigo" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">รายการที่รับเข้าวันนี้</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Last Sync</span>
+          <span class="txt-amber">●</span>
+        </div>
+        <div id="recKpiLastSync" class="mono txt-amber" style="margin-top:12px;font-size:22px;font-weight:700;">--:--:--</div>
+        <div id="recKpiStatusText" class="txt-muted" style="margin-top:4px;font-size:12px;">พร้อมซิงก์ข้อมูล</div>
+      </div>
+    </section>
+
+    <!-- Search, Date Filter & Export Bar -->
+    <section class="panel" style="padding:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 540px;">
+        <select id="receiveSearchColumn" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:600;">
+          <option value="all">ALL COLUMNS</option>
+          <option value="ReceiveID">ReceiveID</option>
+          <option value="LotNo">LotNo</option>
+          <option value="Part_Name">Part_Name</option>
+          <option value="Location_Name">Location</option>
+        </select>
+
+        <div style="position:relative;flex:1 1 200px;">
+          <input id="receiveSearchInput" type="text" class="input-control" style="width:100%;padding-right:34px;"
+            placeholder="ค้นหาเลขใบรับเข้า, LotNo, Part_Name หรือ Location..." />
+          <button id="clearReceiveSearchBtn" type="button" onclick="clearReceiveFilters()" title="ล้างตัวกรอง"
+            class="hidden btn btn-ghost" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:3px 8px;font-size:11px;">✕</button>
+        </div>
+
+        <input id="receiveDateFilter" type="date" class="input-control mono" style="font-size:12.5px;" title="กรองตามวันที่รับเข้า" />
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="mono txt-muted" style="font-size:12px;">
+          SHOWING: <span id="receiveShowingCount" class="txt-cyan" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);font-weight:700;">0</span>
+        </div>
+        <button type="button" onclick="exportReceiveToCSV()" class="btn btn-emerald-soft">
+          <span>⬇</span>
+          <span>Export CSV</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Data Table -->
+    <section class="panel" style="overflow:hidden;">
+      <div id="receiveLoadingBanner" class="hidden mono txt-cyan" style="padding:10px 18px;background:var(--c-cyan-soft-bg);border-bottom:1px solid var(--c-cyan-soft-border);font-size:12px;">
+        ⟳ SYNCING STOCK RECEIVE FROM SUPABASE...
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>RECEIVE ID</th>
+              <th>RECEIVE DATE</th>
+              <th>LOTNO</th>
+              <th>PART_NAME</th>
+              <th>LOCATION</th>
+              <th style="text-align:right;">QTY</th>
+            </tr>
+          </thead>
+          <tbody id="receiveTableBody">
+            <tr>
+              <td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">กำลังโหลดข้อมูลรับเข้า...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Detail Drawer -->
+  <div id="receiveDrawer" class="hidden" style="position:fixed;inset:0;z-index:50;">
+    <div onclick="closeReceiveDrawer()" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);"></div>
+    <aside class="modal-card" style="position:fixed;right:0;top:0;height:100%;width:100%;max-width:460px;border-radius:0;border-left:1px solid var(--border-subtle);padding:22px;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;">
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);">
+          <div>
+            <div class="mono txt-emerald" style="font-size:11px;font-weight:700;text-transform:uppercase;">Receive Inspector</div>
+            <h2 id="receiveDrawerTitle" class="mono txt-primary" style="margin:4px 0 0;font-size:17px;font-weight:700;">-</h2>
+          </div>
+          <button type="button" onclick="closeReceiveDrawer()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
+        </div>
+        <dl id="receiveDrawerContent" style="margin:18px 0 0;display:flex;flex-direction:column;gap:10px;"></dl>
+      </div>
+      <button type="button" onclick="closeReceiveDrawer()" class="btn btn-ghost" style="margin-top:20px;width:100%;">ปิดหน้าต่าง</button>
+    </aside>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/receive.js"></script>
+</body>
+</html>
