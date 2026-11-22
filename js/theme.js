@@ -25,7 +25,6 @@ function toggleTheme() {
   applyTheme(next);
 }
 
-// ใช้ธีมทันทีก่อนเรนเดอร์ลดอาการวาบ
 applyTheme(getCurrentTheme());
 
 document.addEventListener('DOMContentLoaded', () => {

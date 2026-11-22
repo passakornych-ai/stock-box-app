@@ -140,7 +140,6 @@ async function loadStockReceive() {
     if (recErr) throw recErr;
     receiveDetailRows = !detErr && Array.isArray(detData) ? detData : [];
 
-    // จับคู่ยอดรวมจาก stock_receive_detail หากหัวใบรับเข้าไม่มีตัวเลข Qty โดยตรง
     const detailSumByRecId = {};
     receiveDetailRows.forEach((d) => {
       const rid = String(pickField(d, ['ReceiveID', 'receive_id', 'Receive_ID'], '')).trim();
