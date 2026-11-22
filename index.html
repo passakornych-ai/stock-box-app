@@ -8,31 +8,36 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
+  <script src="js/theme.js"></script>
 </head>
 <body>
 
   <header class="app-header">
-    <div class="app-container" style="height:64px;display:flex;align-items:center;justify-content:space-between;gap:14px;">
+    <div class="app-container" style="height:64px;display:flex;align-items:center;justify-content:space-between;gap:12px;">
       <div style="display:flex;align-items:center;gap:12px;min-width:0;">
         <div style="width:40px;height:40px;border-radius:12px;background:rgba(34,211,238,0.14);border:1px solid rgba(34,211,238,0.38);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">
           📦
         </div>
         <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <h1 style="margin:0;font-size:17px;font-weight:700;color:#f8fafc;">
-              STOCK BOX <span class="mono" style="color:#22d3ee;font-size:13px;">OS</span>
+            <h1 style="margin:0;font-size:17px;font-weight:700;color:var(--text-primary);">
+              STOCK BOX <span class="mono" style="color:var(--accent-cyan);font-size:13px;">OS</span>
             </h1>
-            <span id="dbStatusBadge" class="mono" style="padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;background:rgba(16,185,129,0.14);color:#6ee7b7;border:1px solid rgba(52,211,153,0.35);">
+            <span id="dbStatusBadge" class="mono" style="padding:2px 9px;border-radius:999px;font-size:11px;font-weight:600;background:var(--accent-emerald-soft-bg);color:var(--accent-emerald-soft-text);border:1px solid var(--accent-emerald-soft-border);">
               ● LIVE
             </span>
           </div>
-          <p style="margin:2px 0 0;font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          <p style="margin:2px 0 0;font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             ระบบจัดการคลังสินค้า & สต็อกกล่องแบบเรียลไทม์
           </p>
         </div>
       </div>
 
-      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap;">
+        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="btn btn-ghost">
+          <span>☀️</span>
+          <span>โหมดสว่าง</span>
+        </button>
         <a href="location.html" class="btn btn-indigo-soft">
           <span>📍</span>
           <span>ผัง Location</span>
@@ -50,46 +55,46 @@
     <!-- KPI Cards -->
     <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
       <div class="panel kpi-card">
-        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;text-transform:uppercase;">
+        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);text-transform:uppercase;">
           <span>Total Boxes</span>
-          <span style="color:#22d3ee;">●</span>
+          <span style="color:var(--accent-cyan);">●</span>
         </div>
-        <div id="kpiTotalBoxes" class="mono" style="margin-top:10px;font-size:30px;font-weight:700;color:#f8fafc;">0</div>
-        <div style="margin-top:4px;font-size:12px;color:#94a3b8;">จำนวนรายการกล่องในระบบ</div>
+        <div id="kpiTotalBoxes" class="mono" style="margin-top:10px;font-size:30px;font-weight:700;color:var(--text-primary);">0</div>
+        <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">จำนวนรายการกล่องในระบบ</div>
       </div>
 
       <div class="panel kpi-card">
-        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;text-transform:uppercase;">
+        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);text-transform:uppercase;">
           <span>Total Qty Balance</span>
-          <span style="color:#34d399;">●</span>
+          <span style="color:var(--accent-emerald);">●</span>
         </div>
-        <div id="kpiTotalQty" class="mono" style="margin-top:10px;font-size:30px;font-weight:700;color:#6ee7b7;">0</div>
-        <div style="margin-top:4px;font-size:12px;color:#94a3b8;">ยอดรวมจำนวนสินค้าคงเหลือ</div>
+        <div id="kpiTotalQty" class="mono" style="margin-top:10px;font-size:30px;font-weight:700;color:var(--accent-emerald-soft-text);">0</div>
+        <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">ยอดรวมจำนวนสินค้าคงเหลือ</div>
       </div>
 
       <div class="panel kpi-card">
-        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;text-transform:uppercase;">
+        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);text-transform:uppercase;">
           <span>Active Locations</span>
           <span style="color:#818cf8;">●</span>
         </div>
-        <div id="kpiActiveLocs" class="mono" style="margin-top:10px;font-size:30px;font-weight:700;color:#c7d2fe;">0</div>
-        <div style="margin-top:4px;font-size:12px;color:#94a3b8;">ช่องจัดเก็บที่มีสต็อกอยู่</div>
+        <div id="kpiActiveLocs" class="mono" style="margin-top:10px;font-size:30px;font-weight:700;color:var(--accent-indigo-soft-text);">0</div>
+        <div style="margin-top:4px;font-size:12px;color:var(--text-muted);">ช่องจัดเก็บที่มีสต็อกอยู่</div>
       </div>
 
       <div class="panel kpi-card">
-        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;text-transform:uppercase;">
+        <div class="mono" style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);text-transform:uppercase;">
           <span>Last Sync</span>
-          <span style="color:#fbbf24;">●</span>
+          <span style="color:#f59e0b;">●</span>
         </div>
-        <div id="kpiLastSync" class="mono" style="margin-top:12px;font-size:22px;font-weight:700;color:#fcd34d;">--:--:--</div>
-        <div id="kpiStatusText" style="margin-top:4px;font-size:12px;color:#94a3b8;">พร้อมซิงก์ข้อมูล</div>
+        <div id="kpiLastSync" class="mono" style="margin-top:12px;font-size:22px;font-weight:700;color:#d97706;">--:--:--</div>
+        <div id="kpiStatusText" style="margin-top:4px;font-size:12px;color:var(--text-muted);">พร้อมซิงก์ข้อมูล</div>
       </div>
     </section>
 
     <!-- Search, Column Filter & Export Bar -->
     <section class="panel" style="padding:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 520px;">
-        <select id="searchColumn" class="select-control mono" style="font-size:12.5px;color:#67e8f9;">
+        <select id="searchColumn" class="select-control mono" style="font-size:12.5px;color:var(--accent-cyan-text);">
           <option value="all">ALL COLUMNS</option>
           <option value="StockBoxID">StockBoxID</option>
           <option value="Part_Name">Part_Name</option>
@@ -101,7 +106,7 @@
           <input id="searchInput" type="text" class="input-control" style="width:100%;padding-right:34px;"
             placeholder="พิมพ์คำค้นหาตามคอลัมน์ที่เลือก..." />
           <button id="clearSearchBtn" type="button" onclick="clearFilters()" title="ล้างตัวกรอง"
-            class="hidden" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:#1e293b;color:#cbd5e1;border:none;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;">✕</button>
+            class="hidden btn btn-ghost" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:3px 8px;font-size:11px;">✕</button>
         </div>
 
         <select id="statusFilter" class="select-control" style="font-size:12.5px;">
@@ -112,8 +117,8 @@
       </div>
 
       <div style="display:flex;align-items:center;gap:12px;">
-        <div class="mono" style="font-size:12px;color:#94a3b8;">
-          SHOWING: <span id="showingCount" style="padding:3px 9px;border-radius:8px;background:#1e293b;color:#67e8f9;font-weight:700;">0</span>
+        <div class="mono" style="font-size:12px;color:var(--text-muted);">
+          SHOWING: <span id="showingCount" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);color:var(--accent-cyan-text);font-weight:700;">0</span>
         </div>
         <button type="button" onclick="exportFilteredToCSV()" class="btn btn-emerald-soft">
           <span>⬇</span>
@@ -124,7 +129,7 @@
 
     <!-- Data Table -->
     <section class="panel" style="overflow:hidden;">
-      <div id="loadingBanner" class="hidden mono" style="padding:10px 18px;background:rgba(34,211,238,0.1);border-bottom:1px solid rgba(34,211,238,0.22);color:#67e8f9;font-size:12px;">
+      <div id="loadingBanner" class="hidden mono" style="padding:10px 18px;background:rgba(34,211,238,0.12);border-bottom:1px solid var(--border-accent);color:var(--accent-cyan-text);font-size:12px;">
         ⟳ SYNCING DATA FROM SUPABASE...
       </div>
 
@@ -142,7 +147,7 @@
           </thead>
           <tbody id="stockTableBody">
             <tr>
-              <td colspan="6" style="padding:44px 16px;text-align:center;color:#94a3b8;">กำลังโหลดข้อมูล...</td>
+              <td colspan="6" style="padding:44px 16px;text-align:center;color:var(--text-muted);">กำลังโหลดข้อมูล...</td>
             </tr>
           </tbody>
         </table>
@@ -153,13 +158,13 @@
 
   <!-- Detail Drawer -->
   <div id="detailDrawer" class="hidden" style="position:fixed;inset:0;z-index:50;">
-    <div onclick="closeDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,0.68);"></div>
-    <aside class="panel" style="position:fixed;right:0;top:0;height:100%;width:100%;max-width:440px;border-radius:0;border-left:1px solid rgba(148,163,184,0.2);padding:22px;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;">
+    <div onclick="closeDrawer()" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);"></div>
+    <aside class="panel" style="position:fixed;right:0;top:0;height:100%;width:100%;max-width:440px;border-radius:0;border-left:1px solid var(--border-subtle);padding:22px;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;">
       <div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid rgba(148,163,184,0.16);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);">
           <div>
-            <div class="mono" style="font-size:11px;color:#22d3ee;text-transform:uppercase;">Box Inspector</div>
-            <h2 id="drawerTitle" class="mono" style="margin:4px 0 0;font-size:17px;font-weight:700;color:#f8fafc;">-</h2>
+            <div class="mono" style="font-size:11px;color:var(--accent-cyan);text-transform:uppercase;">Box Inspector</div>
+            <h2 id="drawerTitle" class="mono" style="margin:4px 0 0;font-size:17px;font-weight:700;color:var(--text-primary);">-</h2>
           </div>
           <button type="button" onclick="closeDrawer()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
         </div>
