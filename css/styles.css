@@ -1,11 +1,59 @@
-/* css/styles.css */
-
-/* สไตล์เพิ่มเติมเฉพาะทางนอกเหนือจาก Tailwind CSS */
-body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+:root {
+  --bg-base: #070b14;
+  --glass-bg: rgba(15, 23, 42, 0.72);
+  --glass-border: rgba(148, 163, 184, 0.15);
+  --neon-cyan: rgba(34, 211, 238, 0.45);
 }
 
-/* เพิ่ม Effect เวลา Hover แถวตาราง */
-table tbody tr {
-    transition: background-color 0.15s ease-in-out;
+body {
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(circle at 15% 15%, rgba(34, 211, 238, 0.08), transparent 35%),
+    radial-gradient(circle at 85% 20%, rgba(129, 140, 248, 0.09), transparent 40%),
+    linear-gradient(to right, rgba(148, 163, 184, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.04) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+}
+
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
+}
+
+.neon-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.neon-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 10px 28px rgba(34, 211, 238, 0.12);
+}
+
+.slot-occupied {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.42);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.12);
+}
+
+.slot-occupied:hover {
+  border-color: rgba(110, 231, 183, 0.8);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.22);
+}
+
+.slot-empty {
+  background: rgba(15, 23, 42, 0.62);
+  border: 1px solid rgba(51, 65, 85, 0.85);
+}
+
+.slot-empty:hover {
+  border-color: rgba(100, 116, 139, 0.9);
+}
+
+.slot-highlight {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  box-shadow: 0 0 28px rgba(34, 211, 238, 0.35);
 }
