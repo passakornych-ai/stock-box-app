@@ -1,5 +1,6 @@
 let allStockRows = [];
 let currentFilteredRows = [];
+let sortState = { key: null, dir: 'asc' };
 
 const pickField = (obj, keys, fallback = '-') => {
   for (const k of keys) {
@@ -50,8 +51,66 @@ function clearFilters() {
   if (searchInput) searchInput.value = '';
   if (searchColumn) searchColumn.value = 'all';
   if (statusFilter) statusFilter.value = 'all';
+  sortState = { key: null, dir: 'asc' };
 
   renderTable(allStockRows);
+}
+
+function getColumnValue(item, colKey) {
+  const map = {
+    StockBoxID: ['StockBoxID', 'stock_box_id', 'Row ID'],
+    Part_Name: ['Part_Name', 'part_name', 'Product'],
+    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
+    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id'],
+    QtyBalance: ['QtyBalance', 'qty_balance', 'Qty', 'qty']
+  };
+  const val = pickField(item, map[colKey] || [colKey], '');
+  if (colKey === 'QtyBalance') {
+    return Number(val) || 0;
+  }
+  return String(val === '-' ? '' : val).toLowerCase();
+}
+
+function sortByColumn(colKey) {
+  if (sortState.key === colKey) {
+    sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortState.key = colKey;
+    sortState.dir = colKey === 'QtyBalance' ? 'desc' : 'asc';
+  }
+  renderTable(allStockRows);
+}
+
+function initSortableHeaders() {
+  const ths = document.querySelectorAll('thead th');
+  const keyByIndex = ['StockBoxID', 'Part_Name', 'LotNo', 'Location_Name', 'QtyBalance'];
+
+  ths.forEach((th, index) => {
+    const key = keyByIndex[index];
+    if (!key) return;
+    th.classList.add('cursor-pointer', 'select-none', 'hover:text-cyan-300', 'transition');
+    th.title = 'คลิกเพื่อเรียงลำดับ';
+    th.onclick = () => sortByColumn(key);
+  });
+}
+
+function updateSortIndicators() {
+  const ths = document.querySelectorAll('thead th');
+  const keyByIndex = ['StockBoxID', 'Part_Name', 'LotNo', 'Location_Name', 'QtyBalance'];
+  const baseLabels = ['StockBoxID', 'Part_Name', 'LotNo', 'Location', 'QtyBalance'];
+
+  ths.forEach((th, index) => {
+    const key = keyByIndex[index];
+    if (!key) return;
+    let arrow = ' ↕';
+    if (sortState.key === key) {
+      arrow = sortState.dir === 'asc' ? ' ↑' : ' ↓';
+      th.classList.add('text-cyan-300');
+    } else {
+      th.classList.remove('text-cyan-300');
+    }
+    th.textContent = `${baseLabels[index]}${arrow}`;
+  });
 }
 
 async function loadDashboard() {
@@ -127,7 +186,7 @@ function getFilteredRows(rows) {
   const clearBtn = document.getElementById('clearSearchBtn');
 
   if (clearBtn) {
-    clearBtn.classList.toggle('hidden', !q && col === 'all' && status === 'all');
+    clearBtn.classList.toggle('hidden', !q && col === 'all' && status === 'all' && !sortState.key);
   }
 
   const colKeyMap = {
@@ -137,7 +196,7 @@ function getFilteredRows(rows) {
     Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id']
   };
 
-  return rows.filter((r) => {
+  let result = rows.filter((r) => {
     const qty = Number(pickField(r, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
     if (status === 'available' && qty <= 0) return false;
     if (status === 'empty' && qty > 0) return false;
@@ -151,11 +210,27 @@ function getFilteredRows(rows) {
     const targetVal = String(pickField(r, colKeyMap[col] || [col], '')).toLowerCase();
     return targetVal.includes(q);
   });
+
+  if (sortState.key) {
+    const { key, dir } = sortState;
+    const factor = dir === 'asc' ? 1 : -1;
+    result = [...result].sort((a, b) => {
+      const valA = getColumnValue(a, key);
+      const valB = getColumnValue(b, key);
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return (valA - valB) * factor;
+      }
+      return String(valA).localeCompare(String(valB), undefined, { numeric: true }) * factor;
+    });
+  }
+
+  return result;
 }
 
 function renderTable(rows) {
   const tbody = document.getElementById('stockTableBody');
   currentFilteredRows = getFilteredRows(rows);
+  updateSortIndicators();
   document.getElementById('showingCount').textContent = currentFilteredRows.length.toLocaleString();
 
   if (!tbody) return;
@@ -271,6 +346,7 @@ function exportFilteredToCSV() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initSortableHeaders();
   document.getElementById('searchInput')?.addEventListener('input', () => renderTable(allStockRows));
   document.getElementById('searchColumn')?.addEventListener('change', () => renderTable(allStockRows));
   document.getElementById('statusFilter')?.addEventListener('change', () => renderTable(allStockRows));

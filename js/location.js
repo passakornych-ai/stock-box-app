@@ -18,6 +18,99 @@ const escapeHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+function ensureLocationModal() {
+  let modal = document.getElementById('locationDetailModal');
+  if (modal) return modal;
+
+  modal = document.createElement('div');
+  modal.id = 'locationDetailModal';
+  modal.className = 'fixed inset-0 z-50 hidden';
+  modal.innerHTML = `
+    <div onclick="closeLocationModal()" class="absolute inset-0 bg-black/70"></div>
+    <div class="relative z-10 max-w-2xl mx-auto mt-14 sm:mt-20 px-4">
+      <div class="glass-panel rounded-2xl border border-slate-700/80 overflow-hidden shadow-2xl">
+        <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between gap-3">
+          <div>
+            <span class="text-[11px] font-mono text-emerald-400 uppercase">Slot Inventory Inspector</span>
+            <h2 id="locModalTitle" class="text-lg font-bold font-mono text-white">-</h2>
+          </div>
+          <button type="button" onclick="closeLocationModal()"
+            class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer">✕</button>
+        </div>
+
+        <div id="locModalSummary" class="px-5 py-3 bg-slate-900/60 border-b border-slate-800/80 flex flex-wrap items-center gap-3 text-xs font-mono text-slate-300"></div>
+
+        <div id="locModalBody" class="p-5 max-h-[60vh] overflow-y-auto space-y-3"></div>
+
+        <div class="px-5 py-3.5 border-t border-slate-800 flex items-center justify-between gap-3 bg-slate-900/40">
+          <a id="locModalDashboardLink" href="index.html"
+            class="text-xs font-mono text-cyan-300 hover:text-cyan-200 underline">เปิดดูในหน้า Dashboard →</a>
+          <button type="button" onclick="closeLocationModal()"
+            class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer">ปิดหน้าต่าง</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  return modal;
+}
+
+function openLocationModal(card) {
+  const modal = ensureLocationModal();
+  document.getElementById('locModalTitle').textContent = `LOCATION: ${card.name}`;
+
+  const summaryEl = document.getElementById('locModalSummary');
+  summaryEl.innerHTML = `
+    <span class="px-2.5 py-1 rounded-lg ${
+      card.occupied
+        ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
+        : 'bg-slate-800 text-slate-400 border border-slate-700'
+    }">${card.occupied ? 'สถานะ: มีของ' : 'สถานะ: ว่าง'}</span>
+    <span>จำนวนกล่อง: <strong class="text-white">${card.boxes.toLocaleString()}</strong></span>
+    <span>ยอดรวมคงเหลือ: <strong class="text-emerald-300">${card.qty.toLocaleString()}</strong></span>
+  `;
+
+  const bodyEl = document.getElementById('locModalBody');
+  if (!card.items || card.items.length === 0) {
+    bodyEl.innerHTML = `
+      <div class="py-10 text-center text-slate-400 text-sm">
+        ไม่มีรายการกล่องจัดเก็บในช่อง <span class="font-mono text-slate-200">${escapeHtml(card.name)}</span>
+      </div>
+    `;
+  } else {
+    bodyEl.innerHTML = card.items
+      .map((item) => {
+        const boxId = pickField(item, ['StockBoxID', 'stock_box_id', 'Row ID']);
+        const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
+        const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
+        const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
+
+        return `
+          <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-xs font-bold text-cyan-300">${escapeHtml(boxId)}</span>
+                <span class="text-xs font-mono text-slate-400">LOT: ${escapeHtml(lotNo)}</span>
+              </div>
+              <p class="text-sm font-medium text-slate-100">${escapeHtml(partName)}</p>
+            </div>
+            <div class="sm:text-right font-mono">
+              <span class="text-xs text-slate-400 block">QTY BALANCE</span>
+              <span class="text-base font-bold ${qty > 0 ? 'text-emerald-300' : 'text-slate-500'}">${qty.toLocaleString()}</span>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  modal.classList.remove('hidden');
+}
+
+function closeLocationModal() {
+  document.getElementById('locationDetailModal')?.classList.add('hidden');
+}
+
 async function loadLocationMatrix() {
   const loading = document.getElementById('locLoading');
   const grid = document.getElementById('locationGrid');
@@ -41,24 +134,28 @@ async function loadLocationMatrix() {
     (stockRows || []).forEach((item) => {
       const locKey = String(
         pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id'], '')
-      ).trim();
+      )
+        .trim()
+        .toLowerCase();
       const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
       if (!locKey) return;
-      if (!mapByLoc[locKey]) mapByLoc[locKey] = { count: 0, qty: 0 };
+      if (!mapByLoc[locKey]) mapByLoc[locKey] = { count: 0, qty: 0, items: [] };
       mapByLoc[locKey].count += 1;
       mapByLoc[locKey].qty += qty;
+      mapByLoc[locKey].items.push(item);
     });
 
     matrixCards = (locRows || []).map((loc) => {
       const name = String(
         pickField(loc, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Row ID'], 'UNKNOWN')
       ).trim();
-      const info = mapByLoc[name] || { count: 0, qty: 0 };
+      const info = mapByLoc[name.toLowerCase()] || { count: 0, qty: 0, items: [] };
       return {
         name,
         occupied: info.qty > 0 || info.count > 0,
         boxes: info.count,
-        qty: info.qty
+        qty: info.qty,
+        items: info.items
       };
     });
 
@@ -102,10 +199,12 @@ function renderMatrix() {
 
   list.forEach((c) => {
     const isHighlighted = highlightParam && c.name.toLowerCase() === highlightParam;
-    const el = document.createElement('div');
-    el.className = `p-3.5 rounded-xl transition flex flex-col justify-between min-h-[84px] ${
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = `text-left p-3.5 rounded-xl transition flex flex-col justify-between min-h-[84px] cursor-pointer ${
       c.occupied ? 'slot-occupied' : 'slot-empty'
     } ${isHighlighted ? 'slot-highlight' : ''}`;
+    el.onclick = () => openLocationModal(c);
 
     el.innerHTML = `
       <div class="flex items-center justify-between gap-1">
@@ -130,6 +229,12 @@ function renderMatrix() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  ensureLocationModal();
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLocationModal();
+  });
+
   document.querySelectorAll('.filter-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       currentFilter = btn.dataset.filter;
