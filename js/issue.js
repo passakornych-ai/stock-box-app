@@ -444,24 +444,40 @@ function exportSelectedIssueToXLSX() {
 
   const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
 
-  // คำนวณความกว้างคอลัมน์อัตโนมัติ (เผื่อภาษาไทยและเว้นระยะหายใจ)
-  const calcVisualWidth = (val) => {
-    const str = String(val ?? '');
-    let width = 0;
-    for (const ch of str) {
-      width += /[\u0E00-\u0E7F]/.test(ch) ? 1.85 : 1.15;
+  // กำหนดความกว้างทุกคอลัมน์เป็น 12
+  ws['!cols'] = headers.map(() => ({ wch: 12 }));
+
+  // ใส่สีและสไตล์ให้หัวตาราง (แถวที่ 1: คอลัมน์ A - I)
+  const headerStyle = {
+    fill: {
+      patternType: 'solid',
+      fgColor: { rgb: '1E3A8A' } // น้ำเงินเข้ม
+    },
+    font: {
+      name: 'Calibri',
+      sz: 11,
+      bold: true,
+      color: { rgb: 'FFFFFF' } // ตัวอักษรสีขาว
+    },
+    alignment: {
+      horizontal: 'center',
+      vertical: 'center',
+      wrapText: true
+    },
+    border: {
+      top: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      bottom: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      left: { style: 'thin', color: { rgb: 'CBD5E1' } },
+      right: { style: 'thin', color: { rgb: 'CBD5E1' } }
     }
-    return Math.ceil(width);
   };
 
-  ws['!cols'] = headers.map((colName) => {
-    let maxLen = calcVisualWidth(colName);
-    excelRows.forEach((row) => {
-      const len = calcVisualWidth(row[colName]);
-      if (len > maxLen) maxLen = len;
-    });
-    return { wch: Math.min(Math.max(maxLen + 4, 12), 45) };
-  });
+  for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIdx });
+    if (ws[cellRef]) {
+      ws[cellRef].s = headerStyle;
+    }
+  }
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
@@ -475,7 +491,7 @@ function exportSelectedIssueToXLSX() {
   ).trim();
   const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_issue';
 
-  XLSX.writeFile(wb, `${safeFileName}.xlsx`);
+  XLSX.writeFile(wb, `${safeFileName}.xlsx`, { cellStyles: true });
   showIssueToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
 }
 
