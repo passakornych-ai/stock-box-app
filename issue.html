@@ -165,6 +165,10 @@
     <div onclick="closeIssueDrawer()" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);"></div>
     <aside class="modal-card" style="position:fixed;right:0;top:0;height:100%;width:100%;max-width:460px;border-radius:0;border-left:1px solid var(--border-subtle);padding:22px;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;">
       <div>
+        <button id="exportIssueXlsxBtn" type="button" onclick="exportSelectedIssueToXLSX()" class="btn btn-emerald-soft" style="width:100%;">
+          <span>⬇</span>
+          <span>Export XLSX</span>
+        </button>
         <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);">
           <div>
             <div class="mono txt-amber" style="font-size:11px;font-weight:700;text-transform:uppercase;">Issue Inspector</div>
