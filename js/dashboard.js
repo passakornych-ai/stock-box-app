@@ -2,6 +2,8 @@ let allStockRows = [];
 let currentFilteredRows = [];
 let sortState = { key: null, dir: 'asc' };
 
+const getClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
+
 const pickField = (obj, keys, fallback = '-') => {
   for (const k of keys) {
     if (obj && obj[k] !== undefined && obj[k] !== null && String(obj[k]).trim() !== '') {
@@ -24,8 +26,9 @@ function showToast(message) {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'toastBox';
-    toast.className =
-      'fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl bg-slate-900/95 border border-cyan-400/50 text-cyan-200 text-xs font-mono shadow-xl transition-all';
+    toast.className = 'mono';
+    toast.style.cssText =
+      'position:fixed;bottom:20px;right:20px;z-index:60;padding:10px 16px;border-radius:12px;background:#0f172a;border:1px solid rgba(34,211,238,0.5);color:#67e8f9;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,0.45);';
     document.body.appendChild(toast);
   }
   toast.textContent = message;
@@ -82,22 +85,23 @@ function sortByColumn(colKey) {
 }
 
 function initSortableHeaders() {
-  const ths = document.querySelectorAll('thead th');
+  const ths = document.querySelectorAll('.data-table thead th');
   const keyByIndex = ['StockBoxID', 'Part_Name', 'LotNo', 'Location_Name', 'QtyBalance'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
     if (!key) return;
-    th.classList.add('cursor-pointer', 'select-none', 'hover:text-cyan-300', 'transition');
+    th.style.cursor = 'pointer';
+    th.style.userSelect = 'none';
     th.title = 'คลิกเพื่อเรียงลำดับ';
     th.onclick = () => sortByColumn(key);
   });
 }
 
 function updateSortIndicators() {
-  const ths = document.querySelectorAll('thead th');
+  const ths = document.querySelectorAll('.data-table thead th');
   const keyByIndex = ['StockBoxID', 'Part_Name', 'LotNo', 'Location_Name', 'QtyBalance'];
-  const baseLabels = ['StockBoxID', 'Part_Name', 'LotNo', 'Location', 'QtyBalance'];
+  const baseLabels = ['STOCKBOXID', 'PART_NAME', 'LOTNO', 'LOCATION', 'QTYBALANCE'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -105,9 +109,9 @@ function updateSortIndicators() {
     let arrow = ' ↕';
     if (sortState.key === key) {
       arrow = sortState.dir === 'asc' ? ' ↑' : ' ↓';
-      th.classList.add('text-cyan-300');
+      th.style.color = '#67e8f9';
     } else {
-      th.classList.remove('text-cyan-300');
+      th.style.color = '#94a3b8';
     }
     th.textContent = `${baseLabels[index]}${arrow}`;
   });
@@ -115,19 +119,18 @@ function updateSortIndicators() {
 
 async function loadDashboard() {
   const loading = document.getElementById('loadingBanner');
-  const icon = document.getElementById('refreshIcon');
   const tbody = document.getElementById('stockTableBody');
   const badge = document.getElementById('dbStatusBadge');
 
   loading?.classList.remove('hidden');
-  icon?.classList.add('animate-spin');
 
   try {
-    if (typeof _supabase === 'undefined') {
-      throw new Error('ไม่พบตัวแปร _supabase กรุณาตรวจสอบไฟล์ js/config.js');
+    const client = getClient();
+    if (!client) {
+      throw new Error('ยังไม่ได้ khởiสร้าง Supabase client (_supabase) กรุณาเช็กไฟล์ js/config.js');
     }
 
-    const { data, error } = await _supabase.from('stock_box').select('*');
+    const { data, error } = await client.from('stock_box').select('*');
     if (error) throw error;
 
     allStockRows = Array.isArray(data) ? data : [];
@@ -141,25 +144,26 @@ async function loadDashboard() {
     if (statusTextEl) statusTextEl.textContent = 'เชื่อมต่อ Supabase สำเร็จ';
 
     if (badge) {
-      badge.className =
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/30';
-      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>LIVE`;
+      badge.style.background = 'rgba(16, 185, 129, 0.14)';
+      badge.style.color = '#6ee7b7';
+      badge.style.borderColor = 'rgba(52, 211, 153, 0.35)';
+      badge.textContent = '● LIVE';
     }
   } catch (err) {
     console.error('Dashboard Error:', err);
     if (badge) {
-      badge.className =
-        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-mono bg-rose-500/10 text-rose-300 border border-rose-500/30';
-      badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>ERROR`;
+      badge.style.background = 'rgba(244, 63, 94, 0.16)';
+      badge.style.color = '#fda4af';
+      badge.style.borderColor = 'rgba(251, 113, 133, 0.4)';
+      badge.textContent = '● ERROR';
     }
     const statusTextEl = document.getElementById('kpiStatusText');
     if (statusTextEl) statusTextEl.textContent = err.message || 'โหลดข้อมูลไม่สำเร็จ';
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="6" class="py-10 text-center text-rose-400 font-mono text-xs">Error: ${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="padding:40px 16px;text-align:center;color:#fda4af;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeHtml(err.message)}</td></tr>`;
     }
   } finally {
     loading?.classList.add('hidden');
-    icon?.classList.remove('animate-spin');
   }
 }
 
@@ -236,7 +240,7 @@ function renderTable(rows) {
   if (!tbody) return;
 
   if (currentFilteredRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="py-12 text-center text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="padding:44px 16px;text-align:center;color:#94a3b8;">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
     return;
   }
 
@@ -249,7 +253,7 @@ function renderTable(rows) {
     const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
 
     const tr = document.createElement('tr');
-    tr.className = 'hover:bg-cyan-500/5 transition cursor-pointer group';
+    tr.style.cursor = 'pointer';
     tr.onclick = () => openDrawerByIndex(idx);
 
     const safeBoxId = escapeHtml(boxId);
@@ -259,28 +263,28 @@ function renderTable(rows) {
     const jsSafeBoxId = String(boxId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     tr.innerHTML = `
-      <td class="py-3.5 px-4 font-mono text-xs sm:text-sm font-semibold text-cyan-300 group-hover:text-cyan-200">
-        <div class="inline-flex items-center gap-2">
+      <td class="mono" style="font-weight:600;color:#67e8f9;">
+        <div style="display:inline-flex;align-items:center;gap:8px;">
           <span>${safeBoxId}</span>
-          <button type="button" onclick="copyText(event, '${jsSafeBoxId}')" title="คัดลอกรหัส"
-            class="opacity-70 hover:opacity-100 text-[11px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 cursor-pointer">Copy</button>
+          <button type="button" onclick="copyText(event, '${jsSafeBoxId}')"
+            style="padding:2px 8px;border-radius:6px;background:#1e293b;color:#cbd5e1;border:1px solid rgba(148,163,184,0.2);font-size:11px;cursor:pointer;">Copy</button>
         </div>
       </td>
-      <td class="py-3.5 px-4 text-slate-100 font-medium">${safePartName}</td>
-      <td class="py-3.5 px-4 font-mono text-xs text-slate-300">${safeLotNo}</td>
-      <td class="py-3.5 px-4">
+      <td style="font-weight:500;color:#f8fafc;">${safePartName}</td>
+      <td class="mono" style="font-size:12.5px;color:#cbd5e1;">${safeLotNo}</td>
+      <td>
         <a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()"
-          class="px-2.5 py-1 rounded-lg font-mono text-xs bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-200 border border-indigo-400/25 inline-block transition">
+          class="mono" style="display:inline-block;padding:4px 10px;border-radius:8px;font-size:12px;text-decoration:none;background:rgba(99,102,241,0.16);color:#c7d2fe;border:1px solid rgba(129,140,248,0.3);">
           ${safeLoc} ↗
         </a>
       </td>
-      <td class="py-3.5 px-4 text-right font-mono font-bold ${qty > 0 ? 'text-emerald-300' : 'text-slate-500'}">${qty.toLocaleString()}</td>
-      <td class="py-3.5 px-4 text-center">
-        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs ${
-          qty > 0
-            ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-            : 'bg-slate-800 text-slate-400 border border-slate-700'
-        }">${qty > 0 ? 'พร้อมใช้' : 'หมด'}</span>
+      <td class="mono" style="text-align:right;font-weight:700;color:${qty > 0 ? '#6ee7b7' : '#64748b'};">${qty.toLocaleString()}</td>
+      <td style="text-align:center;">
+        <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;background:${
+          qty > 0 ? 'rgba(16,185,129,0.15)' : 'rgba(30,41,59,0.9)'
+        };color:${qty > 0 ? '#6ee7b7' : '#94a3b8'};border:1px solid ${
+          qty > 0 ? 'rgba(52,211,153,0.35)' : 'rgba(71,85,105,0.5)'
+        };">${qty > 0 ? 'พร้อมใช้' : 'หมด'}</span>
       </td>
     `;
     tbody.appendChild(tr);
@@ -296,9 +300,9 @@ function openDrawerByIndex(index) {
   dl.innerHTML = Object.entries(item)
     .map(
       ([key, val]) => `
-      <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800 flex items-start justify-between gap-3">
-        <dt class="text-xs font-mono text-slate-400">${escapeHtml(key)}</dt>
-        <dd class="text-xs font-mono text-slate-100 text-right break-all">${escapeHtml(val ?? '-')}</dd>
+      <div style="padding:12px;border-radius:12px;background:rgba(9,14,26,0.85);border:1px solid rgba(51,65,85,0.7);display:flex;justify-content:space-between;gap:12px;">
+        <dt class="mono" style="font-size:12px;color:#94a3b8;">${escapeHtml(key)}</dt>
+        <dd class="mono" style="font-size:12px;color:#f8fafc;text-align:right;word-break:break-all;margin:0;">${escapeHtml(val ?? '-')}</dd>
       </div>
     `
     )
