@@ -120,7 +120,7 @@ function initIssueSortableHeaders() {
 function updateIssueSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
   const keyByIndex = ['IssueID', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
-  const baseLabels = ['ISSUE ID', 'ISSUE DATE', 'LOTNO', 'PART_NAME', 'LOCATION', 'QTY'];
+  const baseLabels = ['เลขที่เบิกใช้ ISSUENO', 'วันที่สร้าง', 'ผู้สร้าง', 'ประเภท', 'QTY'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
