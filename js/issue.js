@@ -5,6 +5,27 @@ let selectedIssueItem = null;
 let selectedIssueDetails = [];
 let issueSortState = { key: null, dir: 'desc' };
 
+const EXCLUDED_ISSUE_HEADER_KEYS = new Set([
+  'rowid', 'row_id', 'row id',
+  'issueid', 'issue_id',
+  'type',
+  'status'
+]);
+
+const EXCLUDED_ISSUE_DETAIL_KEYS = new Set([
+  'rowid', 'row_id', 'row id',
+  'issuedetailid', 'issue_detail_id', 'issuedetail_id',
+  'issueid', 'issue_id',
+  'stockboxid', 'stock_box_id',
+  'processed',
+  'processedqty', 'processed_qty',
+  'processedstockboxid', 'processed_stock_box_id',
+  'editstage', 'edit_stage',
+  'edittoken', 'edit_token'
+]);
+
+const normalizeKey = (k) => String(k || '').trim().toLowerCase();
+
 const getIssueClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
 const pickIssueField = (obj, keys, fallback = '-') => {
@@ -24,8 +45,10 @@ const escapeIssueHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-function renderAllColumnsList(obj) {
-  const entries = Object.entries(obj || {}).filter(([k]) => !k.startsWith('__'));
+function renderFilteredColumnsList(obj, excludedSet) {
+  const entries = Object.entries(obj || {}).filter(
+    ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeKey(k))
+  );
   return entries
     .map(([k, v]) => {
       const displayVal = v === null || v === undefined || String(v).trim() === '' ? '-' : String(v);
@@ -79,16 +102,14 @@ function clearIssueFilters() {
 
 function getIssueColumnValue(item, colKey) {
   const map = {
-    IssueID: ['IssueID', 'issue_id', 'Issue_ID', 'ID', 'Row ID'],
+    IssueNo: ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
     IssueDate: ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
-    Part_Name: ['Part_Name', 'part_name', 'Product'],
-    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id', 'From_Location'],
+    CreatedBy: ['CreatedBy', 'created_by', 'Operator', 'User'],
     Qty: ['Qty', 'qty', 'IssueQty', 'issue_qty', 'QtyBalance', 'qty_balance']
   };
   const val = pickIssueField(item, map[colKey] || [colKey], '');
   if (colKey === 'Qty') {
-    return Number(val) || 0;
+    return Number(item.__computedQty ?? val) || 0;
   }
   return String(val === '-' ? '' : val).toLowerCase();
 }
@@ -105,7 +126,7 @@ function sortIssueByColumn(colKey) {
 
 function initIssueSortableHeaders() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['IssueID', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+  const keyByIndex = ['IssueNo', 'IssueDate', 'CreatedBy', 'Qty'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -119,8 +140,8 @@ function initIssueSortableHeaders() {
 
 function updateIssueSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['IssueID', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
-  const baseLabels = ['ISSUE ID', 'ISSUE DATE', 'LOTNO', 'PART_NAME', 'LOCATION', 'QTY'];
+  const keyByIndex = ['IssueNo', 'IssueDate', 'CreatedBy', 'Qty'];
+  const baseLabels = ['เลขที่เบิกใช้ ISSUENO', 'ISSUE DATE', 'ผู้สร้าง', 'QTY'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -206,7 +227,7 @@ async function loadStockIssue() {
     const statusTextEl = document.getElementById('issKpiStatusText');
     if (statusTextEl) statusTextEl.textContent = err.message || 'โหลดข้อมูลไม่สำเร็จ';
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="6" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeIssueHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeIssueHtml(err.message)}</td></tr>`;
     }
   } finally {
     loading?.classList.add('hidden');
@@ -242,10 +263,10 @@ function getFilteredIssueRows(rows) {
   }
 
   const colKeyMap = {
-    IssueID: ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
+    IssueNo: ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
+    CreatedBy: ['CreatedBy', 'created_by', 'Operator', 'User'],
     Part_Name: ['Part_Name', 'part_name', 'Product'],
-    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id', 'From_Location']
+    LotNo: ['LotNo', 'lot_no', 'Lot_No']
   };
 
   let result = rows.filter((r) => {
@@ -289,49 +310,37 @@ function renderIssueTable(rows) {
   if (!tbody) return;
 
   if (currentFilteredIssueRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบรายการเบิกออกตามเงื่อนไข</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบรายการเบิกออกตามเงื่อนไข</td></tr>`;
     return;
   }
 
   tbody.innerHTML = '';
   currentFilteredIssueRows.forEach((item, idx) => {
-    const issId = pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID']);
+    const issueNo = pickIssueField(item, ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID']);
     const issDate = pickIssueField(item, ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at']);
-    const lotNo = pickIssueField(item, ['LotNo', 'lot_no', 'Lot_No']);
-    const partName = pickIssueField(item, ['Part_Name', 'part_name', 'Product']);
-    const loc = pickIssueField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'From_Location']);
+    const createdBy = pickIssueField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
     const qty = Number(item.__computedQty) || 0;
 
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.onclick = () => openIssueDrawerByIndex(idx);
 
-    const safeIssId = escapeIssueHtml(issId);
+    const safeIssueNo = escapeIssueHtml(issueNo);
     const safeIssDate = escapeIssueHtml(issDate);
-    const safeLotNo = escapeIssueHtml(lotNo);
-    const safePartName = escapeIssueHtml(partName);
-    const safeLoc = escapeIssueHtml(loc);
-    const jsSafeIssId = String(issId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeCreatedBy = escapeIssueHtml(createdBy);
+    const jsSafeIssueNo = String(issueNo).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     tr.innerHTML = `
-      <td class="mono txt-cyan" style="font-weight:700;">
+      <td class="mono txt-primary" style="font-weight:700;">
         <div style="display:inline-flex;align-items:center;gap:8px;">
-          <span>${safeIssId}</span>
-          <button type="button" onclick="copyIssueText(event, '${jsSafeIssId}')" class="btn btn-ghost"
+          <span>${safeIssueNo}</span>
+          <button type="button" onclick="copyIssueText(event, '${jsSafeIssueNo}')" class="btn btn-ghost"
             style="padding:2px 8px;border-radius:6px;font-size:11px;">Copy</button>
         </div>
       </td>
       <td class="mono txt-secondary" style="font-size:12.5px;">${safeIssDate}</td>
-      <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
-      <td class="txt-primary" style="font-weight:600;">${safePartName}</td>
-      <td>
-        ${
-          loc !== '-'
-            ? `<a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()" class="mono loc-pill">${safeLoc} ↗</a>`
-            : `<span class="txt-muted">-</span>`
-        }
-      </td>
-      <td class="mono txt-amber" style="text-align:right;font-weight:700;">-${qty.toLocaleString()}</td>
+      <td class="txt-secondary" style="font-size:13px;">${safeCreatedBy}</td>
+      <td class="mono txt-primary" style="text-align:right;font-weight:700;">${qty > 0 ? qty.toLocaleString() : '-'}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -343,19 +352,10 @@ function openIssueDrawerByIndex(index) {
 
   selectedIssueItem = item;
   const issId = String(pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '-'));
-  document.getElementById('issueDrawerTitle').textContent = issId;
+  const displayTitle = String(pickIssueField(item, ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Row ID'], '-'));
+  document.getElementById('issueDrawerTitle').textContent = displayTitle;
 
-  const cleanEntries = Object.entries(item).filter(([k]) => !k.startsWith('__'));
-  const fieldsHtml = cleanEntries
-    .map(
-      ([key, val]) => `
-      <div class="detail-row">
-        <dt class="mono txt-muted" style="font-size:12px;">${escapeIssueHtml(key)}</dt>
-        <dd class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;margin:0;">${escapeIssueHtml(val ?? '-')}</dd>
-      </div>
-    `
-    )
-    .join('');
+  const fieldsHtml = renderFilteredColumnsList(item, EXCLUDED_ISSUE_HEADER_KEYS);
 
   selectedIssueDetails = issueDetailRows.filter(
     (d) => String(pickIssueField(d, ['IssueID', 'issue_id', 'Issue_ID'], '')).trim() === issId.trim()
@@ -370,7 +370,7 @@ function openIssueDrawerByIndex(index) {
           <div class="mono txt-amber" style="font-size:11px;font-weight:700;margin-bottom:6px;">
             ITEM #${dIdx + 1}
           </div>
-          <div>${renderAllColumnsList(d)}</div>
+          <div>${renderFilteredColumnsList(d, EXCLUDED_ISSUE_DETAIL_KEYS)}</div>
         </div>
       `
       )
@@ -452,7 +452,7 @@ function exportSelectedIssueToXLSX() {
     ws['A1'].s = {
       fill: {
         patternType: 'solid',
-        fgColor: { rgb: 'D9E1F2' } // สีฟ้าอ่อนสบายตา เปลี่ยนรหัสสี HEX ได้ตามต้องการ
+        fgColor: { rgb: 'D9E1F2' }
       },
       font: {
         bold: true,
