@@ -72,7 +72,7 @@
           <input id="importCreatedBy" type="text" class="input-control" style="width:100%;" value="Admin" />
         </div>
         <div>
-          <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">DEFAULT LOCATION</label>
+          <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">DEFAULT LOCATION_NAME</label>
           <input id="importDefaultLocation" type="text" class="input-control" style="width:100%;" value="ที่จัดเก็บชั่วคราว" />
         </div>
       </div>
@@ -104,7 +104,7 @@
         <div id="impKpiRows" class="mono txt-primary" style="margin-top:10px;font-size:28px;font-weight:700;">0</div>
       </div>
       <div class="panel kpi-card">
-        <div class="mono txt-muted" style="font-size:11px;text-transform:uppercase;">Total Qty</div>
+        <div class="mono txt-muted" style="font-size:11px;text-transform:uppercase;">Total QtyBalance</div>
         <div id="impKpiQty" class="mono txt-emerald" style="margin-top:10px;font-size:28px;font-weight:700;">0</div>
       </div>
       <div class="panel kpi-card">
@@ -123,18 +123,17 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>PART_NAME</th>
-              <th>LOTNO</th>
-              <th>LOCATION_NAME</th>
-              <th style="text-align:right;">QTY</th>
-              <th>TYPE</th>
-              <th>TYPE_CARTONS</th>
+              <th>Part_Name</th>
+              <th>Type_cartons</th>
+              <th>LotNo</th>
+              <th>Location_Name</th>
+              <th style="text-align:right;">QtyBalance</th>
             </tr>
           </thead>
           <tbody id="importPreviewBody">
             <tr>
-              <td colspan="7" class="txt-muted" style="padding:44px 16px;text-align:center;">
-                เลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv เพื่อดูตัวอย่างข้อมูลก่อนบันทึก
+              <td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">
+                เลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv ที่มีหัวคอลัมน์ Part_Name, Type_cartons, LotNo, Location_Name, QtyBalance
               </td>
             </tr>
           </tbody>

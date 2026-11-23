@@ -71,13 +71,15 @@ function pickRowValue(row, keys, fallback = '') {
 function renderImportPreview() {
   const tbody = document.getElementById('importPreviewBody');
   const saveBtn = document.getElementById('saveImportReceiveBtn');
-  const defaultLoc = (document.getElementById('importDefaultLocation')?.value || 'ที่จัดเก็บชั่วคราว').trim() || 'ที่จัดเก็บชั่วคราว';
+  const defaultLoc =
+    (document.getElementById('importDefaultLocation')?.value || 'ที่จัดเก็บชั่วคราว').trim() ||
+    'ที่จัดเก็บชั่วคราว';
 
   let totalQty = 0;
   let validCount = 0;
 
   parsedReceiveItems.forEach((item) => {
-    const qty = Number(item.QTY) || 0;
+    const qty = Number(item.QtyBalance) || 0;
     totalQty += qty;
     if (item.Part_Name && qty > 0) {
       validCount += 1;
@@ -95,24 +97,23 @@ function renderImportPreview() {
   if (!tbody) return;
 
   if (parsedReceiveItems.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="txt-muted" style="padding:44px 16px;text-align:center;">เลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv เพื่อดูตัวอย่างข้อมูลก่อนบันทึก</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">เลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv ที่มีหัวคอลัมน์ Part_Name, Type_cartons, LotNo, Location_Name, QtyBalance</td></tr>`;
     return;
   }
 
   tbody.innerHTML = parsedReceiveItems
     .map((item, idx) => {
-      const qty = Number(item.QTY) || 0;
+      const qty = Number(item.QtyBalance) || 0;
       const loc = item.Location_Name || defaultLoc;
       const isValid = Boolean(item.Part_Name) && qty > 0;
       return `
         <tr style="${isValid ? '' : 'opacity:0.55;'}">
           <td class="mono txt-muted">${idx + 1}</td>
           <td class="mono txt-primary" style="font-weight:700;">${escapeImpHtml(item.Part_Name || '-')}</td>
+          <td class="txt-secondary">${escapeImpHtml(item.Type_cartons || '-')}</td>
           <td class="mono txt-secondary">${escapeImpHtml(item.LotNo || '-')}</td>
           <td class="txt-secondary">${escapeImpHtml(loc)}</td>
           <td class="mono ${qty > 0 ? 'txt-emerald' : 'txt-muted'}" style="text-align:right;font-weight:700;">${qty.toLocaleString()}</td>
-          <td class="txt-secondary">${escapeImpHtml(item.Type || 'กล่องรับเข้าคลัง')}</td>
-          <td class="txt-secondary">${escapeImpHtml(item.Type_cartons || '-')}</td>
         </tr>
       `;
     })
@@ -141,24 +142,22 @@ function handleReceiveFileChange(event) {
 
       parsedReceiveItems = rawRows
         .map((r) => {
-          const partName = pickRowValue(r, ['Part_Name', 'part_name', 'PartName', 'Carton Part No.', 'Box', 'Product'], '');
-          const lotNo = pickRowValue(r, ['LotNo', 'lot_no', 'Lot_No', 'Lot'], '');
-          const locName = pickRowValue(r, ['Location_Name', 'location_name', 'Location', 'Loc'], '');
-          const rawQty = pickRowValue(r, ['QTY', 'Qty', 'qty', 'QtyBalance', 'Amount'], '0');
-          const qty = Number(String(rawQty).replace(/,/g, '')) || 0;
-          const typeVal = pickRowValue(r, ['Type', 'type'], 'กล่องรับเข้าคลัง');
+          const partName = pickRowValue(r, ['Part_Name', 'part_name', 'PartName'], '');
           const typeCartons = pickRowValue(r, ['Type_cartons', 'type_cartons', 'TypeCartons'], '');
+          const lotNo = pickRowValue(r, ['LotNo', 'lot_no', 'Lot_No'], '');
+          const locName = pickRowValue(r, ['Location_Name', 'location_name', 'Location'], '');
+          const rawQty = pickRowValue(r, ['QtyBalance', 'qty_balance', 'QTY', 'Qty', 'qty'], '0');
+          const qtyBalance = Number(String(rawQty).replace(/,/g, '')) || 0;
 
           return {
             Part_Name: partName,
+            Type_cartons: typeCartons,
             LotNo: lotNo,
             Location_Name: locName,
-            QTY: qty,
-            Type: typeVal,
-            Type_cartons: typeCartons
+            QtyBalance: qtyBalance
           };
         })
-        .filter((x) => x.Part_Name || x.LotNo || x.QTY > 0);
+        .filter((x) => x.Part_Name || x.LotNo || x.QtyBalance > 0);
 
       renderImportPreview();
       showImpToast(`LOADED ${parsedReceiveItems.length} ROWS FROM FILE`);
@@ -183,15 +182,14 @@ function downloadReceiveTemplate() {
     showImpToast('ไม่พบไลบรารี XLSX', true);
     return;
   }
-  const headers = ['Part_Name', 'LotNo', 'Location_Name', 'QTY', 'Type', 'Type_cartons'];
+  const headers = ['Part_Name', 'Type_cartons', 'LotNo', 'Location_Name', 'QtyBalance'];
   const sample = [
     {
-      Part_Name: '06NCP',
-      LotNo: '2026-11-24',
-      Location_Name: 'ที่จัดเก็บชั่วคราว',
-      QTY: 10,
-      Type: 'กล่องรับเข้าคลัง',
-      Type_cartons: 'Notebook'
+      Part_Name: '049-018-941',
+      Type_cartons: 'EMC Storage',
+      LotNo: '2026-10-09',
+      Location_Name: 'TB402',
+      QtyBalance: 1
     }
   ];
   const ws = XLSX.utils.json_to_sheet(sample, { header: headers });
@@ -202,7 +200,7 @@ function downloadReceiveTemplate() {
 }
 
 async function submitReceiveImport() {
-  const validItems = parsedReceiveItems.filter((x) => x.Part_Name && (Number(x.QTY) || 0) > 0);
+  const validItems = parsedReceiveItems.filter((x) => x.Part_Name && (Number(x.QtyBalance) || 0) > 0);
   if (!validItems.length) {
     showImpToast('ไม่มีรายการที่ถูกต้องสำหรับบันทึก', true);
     return;
@@ -223,13 +221,16 @@ async function submitReceiveImport() {
     if (saveBtn) saveBtn.disabled = true;
 
     const receiveId = generateRandomId(8);
-    const receiveNo = (document.getElementById('importReceiveNo')?.value || '').trim() || generateDefaultReceiveNo();
+    const receiveNo =
+      (document.getElementById('importReceiveNo')?.value || '').trim() || generateDefaultReceiveNo();
     const rawDateInput = document.getElementById('importReceiveDate')?.value;
     const createdAt = rawDateInput ? new Date(rawDateInput).toISOString() : new Date().toISOString();
     const createdBy = (document.getElementById('importCreatedBy')?.value || 'Admin').trim() || 'Admin';
-    const defaultLoc = (document.getElementById('importDefaultLocation')?.value || 'ที่จัดเก็บชั่วคราว').trim() || 'ที่จัดเก็บชั่วคราว';
+    const defaultLoc =
+      (document.getElementById('importDefaultLocation')?.value || 'ที่จัดเก็บชั่วคราว').trim() ||
+      'ที่จัดเก็บชั่วคราว';
 
-    const totalQty = validItems.reduce((sum, item) => sum + (Number(item.QTY) || 0), 0);
+    const totalQty = validItems.reduce((sum, item) => sum + (Number(item.QtyBalance) || 0), 0);
 
     const headerPayload = {
       ReceiveID: receiveId,
@@ -246,11 +247,12 @@ async function submitReceiveImport() {
       ReceiveDetailID: generateRandomId(8),
       ReceiveID: receiveId,
       Part_Name: item.Part_Name,
+      Type_cartons: item.Type_cartons || '-',
       LotNo: item.LotNo || '-',
       Location_Name: item.Location_Name || defaultLoc,
-      QTY: Number(item.QTY) || 0,
-      Type: item.Type || 'กล่องรับเข้าคลัง',
-      Type_cartons: item.Type_cartons || '-',
+      QTY: Number(item.QtyBalance) || 0,
+      QtyBalance: Number(item.QtyBalance) || 0,
+      Type: 'กล่องรับเข้าคลัง',
       Processed: false
     }));
 
