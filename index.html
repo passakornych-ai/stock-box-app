@@ -108,10 +108,10 @@
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 520px;">
         <select id="searchColumn" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:600;">
           <option value="all">ALL COLUMNS</option>
-          <option value="StockBoxID">StockBoxID</option>
-          <option value="Part_Name">Part_Name</option>
-          <option value="LotNo">LotNo</option>
-          <option value="Location_Name">Location</option>
+          <option value="Part_Name">CARTON PART NO.</option>
+          <option value="Type_cartons">TYPE_CARTONS</option>
+          <option value="LotNo">LOT</option>
+          <option value="Location_Name">LOCATION</option>
         </select>
 
         <div style="position:relative;flex:1 1 220px;">
@@ -132,9 +132,9 @@
         <div class="mono txt-muted" style="font-size:12px;">
           SHOWING: <span id="showingCount" class="txt-cyan" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);font-weight:700;">0</span>
         </div>
-        <button type="button" onclick="exportFilteredToCSV()" class="btn btn-emerald-soft">
+        <button type="button" onclick="exportFilteredToExcel()" class="btn btn-emerald-soft">
           <span>⬇</span>
-          <span>Export CSV</span>
+          <span>Export Excel</span>
         </button>
       </div>
     </section>
@@ -149,9 +149,9 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>STOCKBOXID</th>
-              <th>PART_NAME</th>
-              <th>LOTNO</th>
+              <th>CARTON PART NO.</th>
+              <th>TYPE_CARTONS</th>
+              <th>LOT</th>
               <th>LOCATION</th>
               <th style="text-align:right;">QTYBALANCE</th>
               <th style="text-align:center;">STATUS</th>
@@ -186,6 +186,7 @@
     </aside>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/dashboard.js"></script>

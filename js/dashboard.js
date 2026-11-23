@@ -2,6 +2,15 @@ let allStockRows = [];
 let currentFilteredRows = [];
 let sortState = { key: null, dir: 'asc' };
 
+const EXCLUDED_BOX_INSPECTOR_KEYS = new Set([
+  'rowid', 'row_id', 'row id',
+  'stockboxid', 'stock_box_id',
+  'status',
+  'receivedetailid', 'receive_detail_id', 'receivedetail_id'
+]);
+
+const normalizeBoxKey = (k) => String(k || '').trim().toLowerCase();
+
 const getClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
 const pickField = (obj, keys, fallback = '-') => {
@@ -61,10 +70,10 @@ function clearFilters() {
 
 function getColumnValue(item, colKey) {
   const map = {
-    StockBoxID: ['StockBoxID', 'stock_box_id', 'Row ID'],
-    Part_Name: ['Part_Name', 'part_name', 'Product'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
-    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id'],
+    Part_Name: ['Part_Name', 'part_name', 'Product', 'Carton Part No.'],
+    Type_cartons: ['Type_cartons', 'type_cartons', 'TypeCartons', 'Type'],
+    LotNo: ['LotNo', 'lot_no', 'Lot_No', 'Lot'],
+    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Location'],
     QtyBalance: ['QtyBalance', 'qty_balance', 'Qty', 'qty']
   };
   const val = pickField(item, map[colKey] || [colKey], '');
@@ -86,7 +95,7 @@ function sortByColumn(colKey) {
 
 function initSortableHeaders() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['StockBoxID', 'Part_Name', 'LotNo', 'Location_Name', 'QtyBalance'];
+  const keyByIndex = ['Part_Name', 'Type_cartons', 'LotNo', 'Location_Name', 'QtyBalance'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -100,8 +109,8 @@ function initSortableHeaders() {
 
 function updateSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['StockBoxID', 'Part_Name', 'LotNo', 'Location_Name', 'QtyBalance'];
-  const baseLabels = ['STOCKBOXID', 'PART_NAME', 'LOTNO', 'LOCATION', 'QTYBALANCE'];
+  const keyByIndex = ['Part_Name', 'Type_cartons', 'LotNo', 'Location_Name', 'QtyBalance'];
+  const baseLabels = ['CARTON PART NO.', 'TYPE_CARTONS', 'LOT', 'LOCATION', 'QTYBALANCE'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -174,7 +183,7 @@ function updateKPIs(rows) {
 
   rows.forEach((r) => {
     const qty = Number(pickField(r, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
-    const loc = pickField(r, ['Location_Name', 'location_name', 'LocationID', 'location_id'], '');
+    const loc = pickField(r, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Location'], '');
     totalQty += qty;
     if (loc) locSet.add(String(loc).trim());
   });
@@ -195,10 +204,10 @@ function getFilteredRows(rows) {
   }
 
   const colKeyMap = {
-    StockBoxID: ['StockBoxID', 'stock_box_id', 'Row ID'],
-    Part_Name: ['Part_Name', 'part_name', 'Product'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
-    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id']
+    Part_Name: ['Part_Name', 'part_name', 'Product', 'Carton Part No.'],
+    Type_cartons: ['Type_cartons', 'type_cartons', 'TypeCartons', 'Type'],
+    LotNo: ['LotNo', 'lot_no', 'Lot_No', 'Lot'],
+    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Location']
   };
 
   let result = rows.filter((r) => {
@@ -247,31 +256,24 @@ function renderTable(rows) {
 
   tbody.innerHTML = '';
   currentFilteredRows.forEach((item, idx) => {
-    const boxId = pickField(item, ['StockBoxID', 'stock_box_id', 'Row ID']);
-    const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
-    const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
-    const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id']);
+    const partName = pickField(item, ['Part_Name', 'part_name', 'Product', 'Carton Part No.']);
+    const typeCartons = pickField(item, ['Type_cartons', 'type_cartons', 'TypeCartons', 'Type']);
+    const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No', 'Lot']);
+    const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Location']);
     const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
 
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.onclick = () => openDrawerByIndex(idx);
 
-    const safeBoxId = escapeHtml(boxId);
     const safePartName = escapeHtml(partName);
+    const safeTypeCartons = escapeHtml(typeCartons);
     const safeLotNo = escapeHtml(lotNo);
     const safeLoc = escapeHtml(loc);
-    const jsSafeBoxId = String(boxId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     tr.innerHTML = `
-      <td class="mono txt-cyan" style="font-weight:700;">
-        <div style="display:inline-flex;align-items:center;gap:8px;">
-          <span>${safeBoxId}</span>
-          <button type="button" onclick="copyText(event, '${jsSafeBoxId}')" class="btn btn-ghost"
-            style="padding:2px 8px;border-radius:6px;font-size:11px;">Copy</button>
-        </div>
-      </td>
       <td class="txt-primary" style="font-weight:600;">${safePartName}</td>
+      <td class="txt-secondary" style="font-size:13px;">${safeTypeCartons}</td>
       <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
       <td>
         <a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()" class="mono loc-pill">
@@ -290,10 +292,13 @@ function renderTable(rows) {
 function openDrawerByIndex(index) {
   const item = currentFilteredRows[index];
   if (!item) return;
-  const title = pickField(item, ['StockBoxID', 'stock_box_id', 'Row ID']);
+  const title = pickField(item, ['StockBoxID', 'stock_box_id', 'Row ID', 'Part_Name']);
   document.getElementById('drawerTitle').textContent = title;
   const dl = document.getElementById('drawerContent');
-  dl.innerHTML = Object.entries(item)
+  const entries = Object.entries(item).filter(
+    ([k]) => !k.startsWith('__') && !EXCLUDED_BOX_INSPECTOR_KEYS.has(normalizeBoxKey(k))
+  );
+  dl.innerHTML = entries
     .map(
       ([key, val]) => `
       <div class="detail-row">
@@ -310,39 +315,50 @@ function closeDrawer() {
   document.getElementById('detailDrawer')?.classList.add('hidden');
 }
 
-function exportFilteredToCSV() {
+function exportFilteredToExcel() {
   if (!currentFilteredRows.length) {
     showToast('ไม่มีข้อมูลสำหรับ Export');
     return;
   }
 
-  const headers = ['StockBoxID', 'Part_Name', 'LotNo', 'Location_Name', 'QtyBalance', 'Status'];
-  const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+  if (typeof XLSX === 'undefined') {
+    showToast('ไม่พบไลบรารี XLSX กรุณารีเฟรชหน้า');
+    return;
+  }
 
-  const lines = [
-    headers.map(escapeCSV).join(','),
-    ...currentFilteredRows.map((item) => {
-      const boxId = pickField(item, ['StockBoxID', 'stock_box_id', 'Row ID']);
-      const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
-      const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
-      const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id']);
-      const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
-      const status = qty > 0 ? 'พร้อมใช้' : 'หมด';
-      return [boxId, partName, lotNo, loc, qty, status].map(escapeCSV).join(',');
-    })
-  ];
+  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
+  const headers = ['Carton Part No.', 'Type', 'Lot', 'Location', 'Qty'];
 
-  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
+  const excelRows = currentFilteredRows.map((item) => ({
+    'Carton Part No.': cleanVal(pickField(item, ['Part_Name', 'part_name', 'Product', 'Carton Part No.'], '-')),
+    Type: cleanVal(pickField(item, ['Type_cartons', 'type_cartons', 'TypeCartons', 'Type'], '-')),
+    Lot: cleanVal(pickField(item, ['LotNo', 'lot_no', 'Lot_No', 'Lot'], '-')),
+    Location: cleanVal(pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Location'], '-')),
+    Qty: Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
+  ws['!cols'] = headers.map(() => ({ wch: 12 }));
+
+  if (ws['A1']) {
+    ws['A1'].s = {
+      fill: {
+        patternType: 'solid',
+        fgColor: { rgb: 'D9E1F2' }
+      },
+      font: {
+        bold: true,
+        color: { rgb: '0F172A' }
+      }
+    };
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
   const stamp = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `stock_box_${stamp}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast(`EXPORTED ${currentFilteredRows.length} ROWS`);
+  XLSX.writeFile(wb, `stock_box_${stamp}.xlsx`);
+  showToast(`EXPORTED ${currentFilteredRows.length} ROWS (.XLSX)`);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
