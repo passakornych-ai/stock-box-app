@@ -79,6 +79,7 @@ function clearIssueFilters() {
 
 function getIssueColumnValue(item, colKey) {
   const map = {
+    IssueNo: ['IssueNo', 'issue_no', 'Issue_NO'],
     IssueID: ['IssueID', 'issue_id', 'Issue_ID', 'ID', 'Row ID'],
     IssueDate: ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at'],
     LotNo: ['LotNo', 'lot_no', 'Lot_No'],
