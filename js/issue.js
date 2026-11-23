@@ -105,7 +105,7 @@ function sortIssueByColumn(colKey) {
 
 function initIssueSortableHeaders() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['IssueNo', 'IssueDate', 'CreatedBy', 'Qty'];
+  const keyByIndex = ['IssueNo', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -119,8 +119,8 @@ function initIssueSortableHeaders() {
 
 function updateIssueSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['IssueNo', 'IssueDate', 'CreatedBy', 'Qty'];
-  const baseLabels = ['เลขที่เบิกใช้ ISSUENO', 'วันที่สร้าง', 'ผู้สร้าง', 'QTY'];
+  const keyByIndex = ['IssueNo', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+  const baseLabels = ['เลขที่เบิกใช้ ISSUENO', 'ISSUE DATE', 'LOTNO', 'PART_NAME', 'LOCATION', 'QTY'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
