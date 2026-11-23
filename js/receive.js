@@ -22,7 +22,6 @@ const EXCLUDED_RECEIVE_DETAIL_KEYS = new Set([
   'processedtype', 'processed_type',
   'editstage', 'edit_stage',
   'edittoken', 'edit_token',
-  'type_cartons', 'typecartons',
   'processedtype_cartons', 'processed_type_cartons', 'processedtypecartons'
 ]);
 
