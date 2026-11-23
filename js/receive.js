@@ -3,6 +3,31 @@ let currentFilteredRows = [];
 let receiveDetailRows = [];
 let sortState = { key: null, dir: 'desc' };
 
+const EXCLUDED_RECEIVE_HEADER_KEYS = new Set([
+  'rowid', 'row_id', 'row id',
+  'receiveid', 'receive_id',
+  'type',
+  'status'
+]);
+
+const EXCLUDED_RECEIVE_DETAIL_KEYS = new Set([
+  'rowid', 'row_id', 'row id',
+  'receivedetailid', 'receive_detail_id', 'receivedetail_id',
+  'receiveid', 'receive_id',
+  'processed',
+  'processedqty', 'processed_qty',
+  'processedpart_name', 'processed_part_name', 'processedpartname',
+  'processedlotno', 'processed_lot_no', 'processedlot_no',
+  'processedlocation_name', 'processed_location_name', 'processedlocationname',
+  'processedtype', 'processed_type',
+  'editstage', 'edit_stage',
+  'edittoken', 'edit_token',
+  'type_cartons', 'typecartons',
+  'processedtype_cartons', 'processed_type_cartons', 'processedtypecartons'
+]);
+
+const normalizeReceiveKey = (k) => String(k || '').trim().toLowerCase();
+
 const getClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
 const pickField = (obj, keys, fallback = '-') => {
@@ -22,8 +47,10 @@ const escapeHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-function renderAllReceiveColumnsList(obj) {
-  const entries = Object.entries(obj || {}).filter(([k]) => !k.startsWith('__'));
+function renderFilteredReceiveColumnsList(obj, excludedSet) {
+  const entries = Object.entries(obj || {}).filter(
+    ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeReceiveKey(k))
+  );
   return entries
     .map(([k, v]) => {
       const displayVal = v === null || v === undefined || String(v).trim() === '' ? '-' : String(v);
@@ -77,16 +104,14 @@ function clearReceiveFilters() {
 
 function getReceiveColumnValue(item, colKey) {
   const map = {
-    ReceiveID: ['ReceiveID', 'receive_id', 'Receive_ID', 'ID', 'Row ID'],
+    ReceiveNo: ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'],
     ReceiveDate: ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
-    Part_Name: ['Part_Name', 'part_name', 'Product'],
-    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id'],
+    CreatedBy: ['CreatedBy', 'created_by', 'Operator', 'User'],
     Qty: ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'QtyBalance', 'qty_balance']
   };
   const val = pickField(item, map[colKey] || [colKey], '');
   if (colKey === 'Qty') {
-    return Number(val) || 0;
+    return Number(item.__computedQty ?? val) || 0;
   }
   return String(val === '-' ? '' : val).toLowerCase();
 }
@@ -103,7 +128,7 @@ function sortReceiveByColumn(colKey) {
 
 function initReceiveSortableHeaders() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['ReceiveID', 'ReceiveDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+  const keyByIndex = ['ReceiveNo', 'ReceiveDate', 'CreatedBy', 'Qty'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -117,8 +142,8 @@ function initReceiveSortableHeaders() {
 
 function updateReceiveSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['ReceiveID', 'ReceiveDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
-  const baseLabels = ['RECEIVE ID', 'RECEIVE DATE', 'LOTNO', 'PART_NAME', 'LOCATION', 'QTY'];
+  const keyByIndex = ['ReceiveNo', 'ReceiveDate', 'CreatedBy', 'Qty'];
+  const baseLabels = ['เลขที่รับเข้า RECEIVENO', 'RECEIVE DATE', 'ผู้สร้าง', 'QTY'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -137,7 +162,7 @@ function updateReceiveSortIndicators() {
 async function loadStockReceive() {
   const loading = document.getElementById('receiveLoadingBanner');
   const tbody = document.getElementById('receiveTableBody');
-  const badge = document.getElementById('receiveStatusBadge');
+  const badge = document.getElementById('receiveStatusBadge') || document.getElementById('dbStatusBadge');
 
   loading?.classList.remove('hidden');
 
@@ -158,14 +183,14 @@ async function loadStockReceive() {
     const detailSumByRecId = {};
     receiveDetailRows.forEach((d) => {
       const rid = String(pickField(d, ['ReceiveID', 'receive_id', 'Receive_ID'], '')).trim();
-      const dQty = Number(pickField(d, ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'QtyBalance'], 0)) || 0;
+      const dQty = Number(pickField(d, ['QTY', 'Qty', 'qty', 'ReceiveQty', 'receive_qty', 'QtyBalance'], 0)) || 0;
       if (!rid) return;
       detailSumByRecId[rid] = (detailSumByRecId[rid] || 0) + dQty;
     });
 
     allReceiveRows = (Array.isArray(recData) ? recData : []).map((row) => {
       const rid = String(pickField(row, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'], '')).trim();
-      const rawQty = pickField(row, ['Qty', 'qty', 'ReceiveQty', 'receive_qty', 'TotalQty', 'QtyBalance'], null);
+      const rawQty = pickField(row, ['QTY', 'Qty', 'qty', 'ReceiveQty', 'receive_qty', 'TotalQty', 'QtyBalance'], null);
       const computedQty =
         rawQty !== null && rawQty !== '-' && !Number.isNaN(Number(rawQty))
           ? Number(rawQty)
@@ -204,7 +229,7 @@ async function loadStockReceive() {
     const statusTextEl = document.getElementById('recKpiStatusText');
     if (statusTextEl) statusTextEl.textContent = err.message || 'โหลดข้อมูลไม่สำเร็จ';
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="6" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeHtml(err.message)}</td></tr>`;
     }
   } finally {
     loading?.classList.add('hidden');
@@ -240,10 +265,10 @@ function getFilteredReceiveRows(rows) {
   }
 
   const colKeyMap = {
-    ReceiveID: ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
+    ReceiveNo: ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'],
+    CreatedBy: ['CreatedBy', 'created_by', 'Operator', 'User'],
     Part_Name: ['Part_Name', 'part_name', 'Product'],
-    Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id']
+    LotNo: ['LotNo', 'lot_no', 'Lot_No']
   };
 
   let result = rows.filter((r) => {
@@ -287,49 +312,37 @@ function renderReceiveTable(rows) {
   if (!tbody) return;
 
   if (currentFilteredRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบรายการรับเข้าตามเงื่อนไข</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบรายการรับเข้าตามเงื่อนไข</td></tr>`;
     return;
   }
 
   tbody.innerHTML = '';
   currentFilteredRows.forEach((item, idx) => {
-    const recId = pickField(item, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
+    const receiveNo = pickField(item, ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
     const recDate = pickField(item, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at']);
-    const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
-    const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
-    const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id']);
+    const createdBy = pickField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
     const qty = Number(item.__computedQty) || 0;
 
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.onclick = () => openReceiveDrawerByIndex(idx);
 
-    const safeRecId = escapeHtml(recId);
+    const safeReceiveNo = escapeHtml(receiveNo);
     const safeRecDate = escapeHtml(recDate);
-    const safeLotNo = escapeHtml(lotNo);
-    const safePartName = escapeHtml(partName);
-    const safeLoc = escapeHtml(loc);
-    const jsSafeRecId = String(recId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeCreatedBy = escapeHtml(createdBy);
+    const jsSafeReceiveNo = String(receiveNo).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     tr.innerHTML = `
-      <td class="mono txt-cyan" style="font-weight:700;">
+      <td class="mono txt-primary" style="font-weight:700;">
         <div style="display:inline-flex;align-items:center;gap:8px;">
-          <span>${safeRecId}</span>
-          <button type="button" onclick="copyText(event, '${jsSafeRecId}')" class="btn btn-ghost"
+          <span>${safeReceiveNo}</span>
+          <button type="button" onclick="copyText(event, '${jsSafeReceiveNo}')" class="btn btn-ghost"
             style="padding:2px 8px;border-radius:6px;font-size:11px;">Copy</button>
         </div>
       </td>
       <td class="mono txt-secondary" style="font-size:12.5px;">${safeRecDate}</td>
-      <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
-      <td class="txt-primary" style="font-weight:600;">${safePartName}</td>
-      <td>
-        ${
-          loc !== '-'
-            ? `<a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()" class="mono loc-pill">${safeLoc} ↗</a>`
-            : `<span class="txt-muted">-</span>`
-        }
-      </td>
-      <td class="mono txt-emerald" style="text-align:right;font-weight:700;">+${qty.toLocaleString()}</td>
+      <td class="txt-secondary" style="font-size:13px;">${safeCreatedBy}</td>
+      <td class="mono txt-primary" style="text-align:right;font-weight:700;">${qty > 0 ? qty.toLocaleString() : '-'}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -340,19 +353,10 @@ function openReceiveDrawerByIndex(index) {
   if (!item) return;
 
   const recId = String(pickField(item, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'], '-'));
-  document.getElementById('receiveDrawerTitle').textContent = recId;
+  const displayTitle = String(pickField(item, ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Row ID'], '-'));
+  document.getElementById('receiveDrawerTitle').textContent = displayTitle;
 
-  const cleanEntries = Object.entries(item).filter(([k]) => !k.startsWith('__'));
-  const fieldsHtml = cleanEntries
-    .map(
-      ([key, val]) => `
-      <div class="detail-row">
-        <dt class="mono txt-muted" style="font-size:12px;">${escapeHtml(key)}</dt>
-        <dd class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;margin:0;">${escapeHtml(val ?? '-')}</dd>
-      </div>
-    `
-    )
-    .join('');
+  const fieldsHtml = renderFilteredReceiveColumnsList(item, EXCLUDED_RECEIVE_HEADER_KEYS);
 
   const matchedDetails = receiveDetailRows.filter(
     (d) => String(pickField(d, ['ReceiveID', 'receive_id', 'Receive_ID'], '')).trim() === recId.trim()
@@ -367,7 +371,7 @@ function openReceiveDrawerByIndex(index) {
           <div class="mono txt-emerald" style="font-size:11px;font-weight:700;margin-bottom:6px;">
             ITEM #${dIdx + 1}
           </div>
-          <div>${renderAllReceiveColumnsList(d)}</div>
+          <div>${renderFilteredReceiveColumnsList(d, EXCLUDED_RECEIVE_DETAIL_KEYS)}</div>
         </div>
       `
       )
@@ -397,19 +401,17 @@ function exportReceiveToCSV() {
     return;
   }
 
-  const headers = ['ReceiveID', 'ReceiveDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+  const headers = ['ReceiveNo', 'ReceiveDate', 'CreatedBy', 'Qty'];
   const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
 
   const lines = [
     headers.map(escapeCSV).join(','),
     ...currentFilteredRows.map((item) => {
-      const recId = pickField(item, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
+      const receiveNo = pickField(item, ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
       const recDate = pickField(item, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at']);
-      const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
-      const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
-      const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id']);
+      const createdBy = pickField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
       const qty = Number(item.__computedQty) || 0;
-      return [recId, recDate, lotNo, partName, loc, qty].map(escapeCSV).join(',');
+      return [receiveNo, recDate, createdBy, qty].map(escapeCSV).join(',');
     })
   ];
 

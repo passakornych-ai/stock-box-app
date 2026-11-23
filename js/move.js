@@ -3,6 +3,22 @@ let currentFilteredMoveRows = [];
 let moveDetailRows = [];
 let moveSortState = { key: null, dir: 'desc' };
 
+const EXCLUDED_MOVE_HEADER_KEYS = new Set([
+  'rowid', 'row_id', 'row id',
+  'moveid', 'move_id',
+  'remark', 'remarks',
+  'status'
+]);
+
+const EXCLUDED_MOVE_DETAIL_KEYS = new Set([
+  'rowid', 'row_id', 'row id',
+  'movedetailid', 'move_detail_id', 'movedetail_id',
+  'moveid', 'move_id',
+  'stockboxid', 'stock_box_id'
+]);
+
+const normalizeMoveKey = (k) => String(k || '').trim().toLowerCase();
+
 const getMoveClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
 const pickMoveField = (obj, keys, fallback = '-') => {
@@ -22,8 +38,10 @@ const escapeMoveHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-function renderAllMoveColumnsList(obj) {
-  const entries = Object.entries(obj || {}).filter(([k]) => !k.startsWith('__'));
+function renderFilteredMoveColumnsList(obj, excludedSet) {
+  const entries = Object.entries(obj || {}).filter(
+    ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeMoveKey(k))
+  );
   return entries
     .map(([k, v]) => {
       const displayVal = v === null || v === undefined || String(v).trim() === '' ? '-' : String(v);
@@ -77,17 +95,14 @@ function clearMoveFilters() {
 
 function getMoveColumnValue(item, colKey) {
   const map = {
-    MoveID: ['MoveID', 'move_id', 'Move_ID', 'ID', 'Row ID'],
+    MoveNo: ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Move_ID', 'Row ID'],
     MoveDate: ['MoveDate', 'move_date', 'Move_Date', 'Date', 'CreatedAt', 'created_at'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
-    Part_Name: ['Part_Name', 'part_name', 'Product'],
-    FromLoc: ['From_Location', 'from_location', 'FromLoc', 'from_loc', 'Source_Location', 'Location_Name', 'location_name'],
-    ToLoc: ['To_Location', 'to_location', 'ToLoc', 'to_loc', 'Target_Location', 'Destination_Location'],
+    CreatedBy: ['CreatedBy', 'created_by', 'Operator', 'User'],
     Qty: ['Qty', 'qty', 'MoveQty', 'move_qty', 'QtyBalance', 'qty_balance']
   };
   const val = pickMoveField(item, map[colKey] || [colKey], '');
   if (colKey === 'Qty') {
-    return Number(val) || 0;
+    return Number(item.__computedQty ?? val) || 0;
   }
   return String(val === '-' ? '' : val).toLowerCase();
 }
@@ -104,7 +119,7 @@ function sortMoveByColumn(colKey) {
 
 function initMoveSortableHeaders() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['MoveID', 'MoveDate', 'LotNo', 'Part_Name', 'FromLoc', 'ToLoc', 'Qty'];
+  const keyByIndex = ['MoveNo', 'MoveDate', 'CreatedBy', 'Qty'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -118,8 +133,8 @@ function initMoveSortableHeaders() {
 
 function updateMoveSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['MoveID', 'MoveDate', 'LotNo', 'Part_Name', 'FromLoc', 'ToLoc', 'Qty'];
-  const baseLabels = ['MOVE ID', 'MOVE DATE', 'LOTNO', 'PART_NAME', 'FROM LOC', 'TO LOC', 'QTY'];
+  const keyByIndex = ['MoveNo', 'MoveDate', 'CreatedBy', 'Qty'];
+  const baseLabels = ['เลขที่ย้าย MOVENO', 'MOVE DATE', 'ผู้สร้าง', 'QTY'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -138,7 +153,7 @@ function updateMoveSortIndicators() {
 async function loadStockMove() {
   const loading = document.getElementById('moveLoadingBanner');
   const tbody = document.getElementById('moveTableBody');
-  const badge = document.getElementById('moveStatusBadge');
+  const badge = document.getElementById('moveStatusBadge') || document.getElementById('dbStatusBadge');
 
   loading?.classList.remove('hidden');
 
@@ -205,7 +220,7 @@ async function loadStockMove() {
     const statusTextEl = document.getElementById('movKpiStatusText');
     if (statusTextEl) statusTextEl.textContent = err.message || 'โหลดข้อมูลไม่สำเร็จ';
     if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="7" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeMoveHtml(err.message)}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="4" style="padding:40px 16px;text-align:center;color:#e11d48;font-family:'JetBrains Mono',monospace;font-size:12px;">Error: ${escapeMoveHtml(err.message)}</td></tr>`;
     }
   } finally {
     loading?.classList.add('hidden');
@@ -241,11 +256,10 @@ function getFilteredMoveRows(rows) {
   }
 
   const colKeyMap = {
-    MoveID: ['MoveID', 'move_id', 'Move_ID', 'Row ID'],
-    LotNo: ['LotNo', 'lot_no', 'Lot_No'],
+    MoveNo: ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Move_ID', 'Row ID'],
+    CreatedBy: ['CreatedBy', 'created_by', 'Operator', 'User'],
     Part_Name: ['Part_Name', 'part_name', 'Product'],
-    FromLoc: ['From_Location', 'from_location', 'FromLoc', 'from_loc', 'Source_Location', 'Location_Name', 'location_name'],
-    ToLoc: ['To_Location', 'to_location', 'ToLoc', 'to_loc', 'Target_Location', 'Destination_Location']
+    LotNo: ['LotNo', 'lot_no', 'Lot_No']
   };
 
   let result = rows.filter((r) => {
@@ -289,58 +303,37 @@ function renderMoveTable(rows) {
   if (!tbody) return;
 
   if (currentFilteredMoveRows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบรายการย้ายสินค้าตามเงื่อนไข</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="txt-muted" style="padding:44px 16px;text-align:center;">ไม่พบรายการย้ายสินค้าตามเงื่อนไข</td></tr>`;
     return;
   }
 
   tbody.innerHTML = '';
   currentFilteredMoveRows.forEach((item, idx) => {
-    const movId = pickMoveField(item, ['MoveID', 'move_id', 'Move_ID', 'Row ID']);
+    const moveNo = pickMoveField(item, ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Move_ID', 'Row ID']);
     const movDate = pickMoveField(item, ['MoveDate', 'move_date', 'Move_Date', 'Date', 'CreatedAt', 'created_at']);
-    const lotNo = pickMoveField(item, ['LotNo', 'lot_no', 'Lot_No']);
-    const partName = pickMoveField(item, ['Part_Name', 'part_name', 'Product']);
-    const fromLoc = pickMoveField(item, ['From_Location', 'from_location', 'FromLoc', 'from_loc', 'Source_Location', 'Location_Name', 'location_name']);
-    const toLoc = pickMoveField(item, ['To_Location', 'to_location', 'ToLoc', 'to_loc', 'Target_Location', 'Destination_Location']);
+    const createdBy = pickMoveField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
     const qty = Number(item.__computedQty) || 0;
 
     const tr = document.createElement('tr');
     tr.style.cursor = 'pointer';
     tr.onclick = () => openMoveDrawerByIndex(idx);
 
-    const safeMovId = escapeMoveHtml(movId);
+    const safeMoveNo = escapeMoveHtml(moveNo);
     const safeMovDate = escapeMoveHtml(movDate);
-    const safeLotNo = escapeMoveHtml(lotNo);
-    const safePartName = escapeMoveHtml(partName);
-    const safeFromLoc = escapeMoveHtml(fromLoc);
-    const safeToLoc = escapeMoveHtml(toLoc);
-    const jsSafeMovId = String(movId).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeCreatedBy = escapeMoveHtml(createdBy);
+    const jsSafeMoveNo = String(moveNo).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     tr.innerHTML = `
-      <td class="mono txt-cyan" style="font-weight:700;">
+      <td class="mono txt-primary" style="font-weight:700;">
         <div style="display:inline-flex;align-items:center;gap:8px;">
-          <span>${safeMovId}</span>
-          <button type="button" onclick="copyMoveText(event, '${jsSafeMovId}')" class="btn btn-ghost"
+          <span>${safeMoveNo}</span>
+          <button type="button" onclick="copyMoveText(event, '${jsSafeMoveNo}')" class="btn btn-ghost"
             style="padding:2px 8px;border-radius:6px;font-size:11px;">Copy</button>
         </div>
       </td>
       <td class="mono txt-secondary" style="font-size:12.5px;">${safeMovDate}</td>
-      <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
-      <td class="txt-primary" style="font-weight:600;">${safePartName}</td>
-      <td>
-        ${
-          fromLoc !== '-'
-            ? `<a href="location.html?highlight=${encodeURIComponent(String(fromLoc))}" onclick="event.stopPropagation()" class="mono loc-pill">${safeFromLoc} ↗</a>`
-            : `<span class="txt-muted">-</span>`
-        }
-      </td>
-      <td>
-        ${
-          toLoc !== '-'
-            ? `<a href="location.html?highlight=${encodeURIComponent(String(toLoc))}" onclick="event.stopPropagation()" class="mono status-pill-active" style="border-radius:8px;text-decoration:none;">${safeToLoc} ↗</a>`
-            : `<span class="txt-muted">-</span>`
-        }
-      </td>
-      <td class="mono txt-indigo" style="text-align:right;font-weight:700;">${qty.toLocaleString()}</td>
+      <td class="txt-secondary" style="font-size:13px;">${safeCreatedBy}</td>
+      <td class="mono txt-primary" style="text-align:right;font-weight:700;">${qty > 0 ? qty.toLocaleString() : '-'}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -351,19 +344,10 @@ function openMoveDrawerByIndex(index) {
   if (!item) return;
 
   const movId = String(pickMoveField(item, ['MoveID', 'move_id', 'Move_ID', 'Row ID'], '-'));
-  document.getElementById('moveDrawerTitle').textContent = movId;
+  const displayTitle = String(pickMoveField(item, ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Row ID'], '-'));
+  document.getElementById('moveDrawerTitle').textContent = displayTitle;
 
-  const cleanEntries = Object.entries(item).filter(([k]) => !k.startsWith('__'));
-  const fieldsHtml = cleanEntries
-    .map(
-      ([key, val]) => `
-      <div class="detail-row">
-        <dt class="mono txt-muted" style="font-size:12px;">${escapeMoveHtml(key)}</dt>
-        <dd class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;margin:0;">${escapeMoveHtml(val ?? '-')}</dd>
-      </div>
-    `
-    )
-    .join('');
+  const fieldsHtml = renderFilteredMoveColumnsList(item, EXCLUDED_MOVE_HEADER_KEYS);
 
   const matchedDetails = moveDetailRows.filter(
     (d) => String(pickMoveField(d, ['MoveID', 'move_id', 'Move_ID'], '')).trim() === movId.trim()
@@ -378,7 +362,7 @@ function openMoveDrawerByIndex(index) {
           <div class="mono txt-indigo" style="font-size:11px;font-weight:700;margin-bottom:6px;">
             ITEM #${dIdx + 1}
           </div>
-          <div>${renderAllMoveColumnsList(d)}</div>
+          <div>${renderFilteredMoveColumnsList(d, EXCLUDED_MOVE_DETAIL_KEYS)}</div>
         </div>
       `
       )
@@ -408,20 +392,17 @@ function exportMoveToCSV() {
     return;
   }
 
-  const headers = ['MoveID', 'MoveDate', 'LotNo', 'Part_Name', 'From_Location', 'To_Location', 'Qty'];
+  const headers = ['MoveNo', 'MoveDate', 'CreatedBy', 'Qty'];
   const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
 
   const lines = [
     headers.map(escapeCSV).join(','),
     ...currentFilteredMoveRows.map((item) => {
-      const movId = pickMoveField(item, ['MoveID', 'move_id', 'Move_ID', 'Row ID']);
+      const moveNo = pickMoveField(item, ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Move_ID', 'Row ID']);
       const movDate = pickMoveField(item, ['MoveDate', 'move_date', 'Move_Date', 'Date', 'CreatedAt', 'created_at']);
-      const lotNo = pickMoveField(item, ['LotNo', 'lot_no', 'Lot_No']);
-      const partName = pickMoveField(item, ['Part_Name', 'part_name', 'Product']);
-      const fromLoc = pickMoveField(item, ['From_Location', 'from_location', 'FromLoc', 'from_loc', 'Source_Location', 'Location_Name', 'location_name']);
-      const toLoc = pickMoveField(item, ['To_Location', 'to_location', 'ToLoc', 'to_loc', 'Target_Location', 'Destination_Location']);
+      const createdBy = pickMoveField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
       const qty = Number(item.__computedQty) || 0;
-      return [movId, movDate, lotNo, partName, fromLoc, toLoc, qty].map(escapeCSV).join(',');
+      return [moveNo, movDate, createdBy, qty].map(escapeCSV).join(',');
     })
   ];
 

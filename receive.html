@@ -108,15 +108,15 @@
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 540px;">
         <select id="receiveSearchColumn" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:600;">
           <option value="all">ALL COLUMNS</option>
-          <option value="ReceiveID">ReceiveID</option>
-          <option value="LotNo">LotNo</option>
+          <option value="ReceiveNo">ReceiveNo</option>
+          <option value="CreatedBy">ผู้สร้าง</option>
           <option value="Part_Name">Part_Name</option>
-          <option value="Location_Name">Location</option>
+          <option value="LotNo">LotNo</option>
         </select>
 
         <div style="position:relative;flex:1 1 200px;">
           <input id="receiveSearchInput" type="text" class="input-control" style="width:100%;padding-right:34px;"
-            placeholder="ค้นหาเลขใบรับเข้า, LotNo, Part_Name หรือ Location..." />
+            placeholder="ค้นหาเลขที่รับเข้า, ผู้สร้าง, Part_Name หรือ LotNo..." />
           <button id="clearReceiveSearchBtn" type="button" onclick="clearReceiveFilters()" title="ล้างตัวกรอง"
             class="hidden btn btn-ghost" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:3px 8px;font-size:11px;">✕</button>
         </div>
@@ -145,17 +145,15 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>RECEIVE ID</th>
+              <th>เลขที่รับเข้า RECEIVENO</th>
               <th>RECEIVE DATE</th>
-              <th>LOTNO</th>
-              <th>PART_NAME</th>
-              <th>LOCATION</th>
+              <th>ผู้สร้าง</th>
               <th style="text-align:right;">QTY</th>
             </tr>
           </thead>
           <tbody id="receiveTableBody">
             <tr>
-              <td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">กำลังโหลดข้อมูลรับเข้า...</td>
+              <td colspan="4" class="txt-muted" style="padding:44px 16px;text-align:center;">กำลังโหลดข้อมูลรับเข้า...</td>
             </tr>
           </tbody>
         </table>
