@@ -1,6 +1,8 @@
 let allReceiveRows = [];
 let currentFilteredRows = [];
 let receiveDetailRows = [];
+let selectedReceiveItem = null;
+let selectedReceiveDetails = [];
 let sortState = { key: null, dir: 'desc' };
 
 const EXCLUDED_RECEIVE_HEADER_KEYS = new Set([
@@ -351,19 +353,20 @@ function openReceiveDrawerByIndex(index) {
   const item = currentFilteredRows[index];
   if (!item) return;
 
+  selectedReceiveItem = item;
   const recId = String(pickField(item, ['ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'], '-'));
   const displayTitle = String(pickField(item, ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Row ID'], '-'));
   document.getElementById('receiveDrawerTitle').textContent = displayTitle;
 
   const fieldsHtml = renderFilteredReceiveColumnsList(item, EXCLUDED_RECEIVE_HEADER_KEYS);
 
-  const matchedDetails = receiveDetailRows.filter(
+  selectedReceiveDetails = receiveDetailRows.filter(
     (d) => String(pickField(d, ['ReceiveID', 'receive_id', 'Receive_ID'], '')).trim() === recId.trim()
   );
 
   let detailsSectionHtml = '';
-  if (matchedDetails.length > 0) {
-    const detailCards = matchedDetails
+  if (selectedReceiveDetails.length > 0) {
+    const detailCards = selectedReceiveDetails
       .map(
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
@@ -379,11 +382,17 @@ function openReceiveDrawerByIndex(index) {
     detailsSectionHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
         <div class="mono txt-emerald" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-          Detail Items (${matchedDetails.length})
+          Detail Items (${selectedReceiveDetails.length})
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">${detailCards}</div>
       </div>
     `;
+  }
+
+  const exportBtn = document.getElementById('exportReceiveXlsxBtn');
+  if (exportBtn) {
+    exportBtn.disabled = selectedReceiveDetails.length === 0;
+    exportBtn.style.opacity = selectedReceiveDetails.length === 0 ? '0.5' : '1';
   }
 
   document.getElementById('receiveDrawerContent').innerHTML = fieldsHtml + detailsSectionHtml;
@@ -394,37 +403,72 @@ function closeReceiveDrawer() {
   document.getElementById('receiveDrawer')?.classList.add('hidden');
 }
 
-function exportReceiveToCSV() {
-  if (!currentFilteredRows.length) {
-    showToast('ไม่มีข้อมูลสำหรับ Export');
+function exportSelectedReceiveToXLSX() {
+  if (!selectedReceiveItem) {
+    showToast('กรุณาเลือกรายการใบรับเข้าก่อน');
     return;
   }
 
-  const headers = ['ReceiveNo', 'ReceiveDate', 'CreatedBy', 'Qty'];
-  const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+  if (!selectedReceiveDetails.length) {
+    showToast('ใบรับเข้านี้ไม่มี Detail Items สำหรับ Export');
+    return;
+  }
 
-  const lines = [
-    headers.map(escapeCSV).join(','),
-    ...currentFilteredRows.map((item) => {
-      const receiveNo = pickField(item, ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
-      const recDate = pickField(item, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at']);
-      const createdBy = pickField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
-      const qty = Number(item.__computedQty) || 0;
-      return [receiveNo, recDate, createdBy, qty].map(escapeCSV).join(',');
-    })
+  if (typeof XLSX === 'undefined') {
+    showToast('ไม่พบไลบรารี XLSX กรุณารีเฟรชหน้า');
+    return;
+  }
+
+  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
+
+  const headers = [
+    'Part_Name',
+    'LotNo',
+    'Location_Name',
+    'QTY',
+    'Type',
+    'Type_cartons'
   ];
 
-  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `stock_receive_${stamp}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast(`EXPORTED ${currentFilteredRows.length} ROWS`);
+  const excelRows = selectedReceiveDetails.map((d) => ({
+    Part_Name: cleanVal(pickField(d, ['Part_Name', 'part_name', 'Product'], '-')),
+    LotNo: cleanVal(pickField(d, ['LotNo', 'lot_no', 'Lot_No'], '-')),
+    Location_Name: cleanVal(pickField(d, ['Location_Name', 'location_name', 'Location'], '-')),
+    QTY: Number(pickField(d, ['QTY', 'Qty', 'qty', 'ReceiveQty', 'receive_qty'], 0)) || 0,
+    Type: cleanVal(pickField(d, ['Type', 'type'], '-')),
+    Type_cartons: cleanVal(pickField(d, ['Type_cartons', 'type_cartons', 'TypeCartons'], '-'))
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
+  ws['!cols'] = headers.map(() => ({ wch: 12 }));
+
+  if (ws['A1']) {
+    ws['A1'].s = {
+      fill: {
+        patternType: 'solid',
+        fgColor: { rgb: 'D9E1F2' }
+      },
+      font: {
+        bold: true,
+        color: { rgb: '0F172A' }
+      }
+    };
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  const rawDocName = String(
+    pickField(
+      selectedReceiveItem,
+      ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Receive_ID', 'Row ID'],
+      'stock_receive'
+    )
+  ).trim();
+  const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_receive';
+
+  XLSX.writeFile(wb, `${safeFileName}.xlsx`);
+  showToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,6 +1,8 @@
 let allMoveRows = [];
 let currentFilteredMoveRows = [];
 let moveDetailRows = [];
+let selectedMoveItem = null;
+let selectedMoveDetails = [];
 let moveSortState = { key: null, dir: 'desc' };
 
 const EXCLUDED_MOVE_HEADER_KEYS = new Set([
@@ -343,19 +345,20 @@ function openMoveDrawerByIndex(index) {
   const item = currentFilteredMoveRows[index];
   if (!item) return;
 
+  selectedMoveItem = item;
   const movId = String(pickMoveField(item, ['MoveID', 'move_id', 'Move_ID', 'Row ID'], '-'));
   const displayTitle = String(pickMoveField(item, ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Row ID'], '-'));
   document.getElementById('moveDrawerTitle').textContent = displayTitle;
 
   const fieldsHtml = renderFilteredMoveColumnsList(item, EXCLUDED_MOVE_HEADER_KEYS);
 
-  const matchedDetails = moveDetailRows.filter(
+  selectedMoveDetails = moveDetailRows.filter(
     (d) => String(pickMoveField(d, ['MoveID', 'move_id', 'Move_ID'], '')).trim() === movId.trim()
   );
 
   let detailsSectionHtml = '';
-  if (matchedDetails.length > 0) {
-    const detailCards = matchedDetails
+  if (selectedMoveDetails.length > 0) {
+    const detailCards = selectedMoveDetails
       .map(
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
@@ -371,11 +374,17 @@ function openMoveDrawerByIndex(index) {
     detailsSectionHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
         <div class="mono txt-indigo" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-          Detail Items (${matchedDetails.length})
+          Detail Items (${selectedMoveDetails.length})
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">${detailCards}</div>
       </div>
     `;
+  }
+
+  const exportBtn = document.getElementById('exportMoveXlsxBtn');
+  if (exportBtn) {
+    exportBtn.disabled = selectedMoveDetails.length === 0;
+    exportBtn.style.opacity = selectedMoveDetails.length === 0 ? '0.5' : '1';
   }
 
   document.getElementById('moveDrawerContent').innerHTML = fieldsHtml + detailsSectionHtml;
@@ -386,37 +395,74 @@ function closeMoveDrawer() {
   document.getElementById('moveDrawer')?.classList.add('hidden');
 }
 
-function exportMoveToCSV() {
-  if (!currentFilteredMoveRows.length) {
-    showMoveToast('ไม่มีข้อมูลสำหรับ Export');
+function exportSelectedMoveToXLSX() {
+  if (!selectedMoveItem) {
+    showMoveToast('กรุณาเลือกรายการใบย้ายก่อน');
     return;
   }
 
-  const headers = ['MoveNo', 'MoveDate', 'CreatedBy', 'Qty'];
-  const escapeCSV = (val) => `"${String(val ?? '').replace(/"/g, '""')}"`;
+  if (!selectedMoveDetails.length) {
+    showMoveToast('ใบย้ายนี้ไม่มี Detail Items สำหรับ Export');
+    return;
+  }
 
-  const lines = [
-    headers.map(escapeCSV).join(','),
-    ...currentFilteredMoveRows.map((item) => {
-      const moveNo = pickMoveField(item, ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Move_ID', 'Row ID']);
-      const movDate = pickMoveField(item, ['MoveDate', 'move_date', 'Move_Date', 'Date', 'CreatedAt', 'created_at']);
-      const createdBy = pickMoveField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
-      const qty = Number(item.__computedQty) || 0;
-      return [moveNo, movDate, createdBy, qty].map(escapeCSV).join(',');
-    })
+  if (typeof XLSX === 'undefined') {
+    showMoveToast('ไม่พบไลบรารี XLSX กรุณารีเฟรชหน้า');
+    return;
+  }
+
+  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
+
+  const headers = [
+    'Part_Name',
+    'LotNo',
+    'Location_Name',
+    'NewLocation_Name',
+    'Qty',
+    'Type',
+    'Type_cartons'
   ];
 
-  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const stamp = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `stock_move_${stamp}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showMoveToast(`EXPORTED ${currentFilteredMoveRows.length} ROWS`);
+  const excelRows = selectedMoveDetails.map((d) => ({
+    Part_Name: cleanVal(pickMoveField(d, ['Part_Name', 'part_name', 'Product'], '-')),
+    LotNo: cleanVal(pickMoveField(d, ['LotNo', 'lot_no', 'Lot_No'], '-')),
+    Location_Name: cleanVal(pickMoveField(d, ['Location_Name', 'location_name', 'From_Location', 'Location'], '-')),
+    NewLocation_Name: cleanVal(pickMoveField(d, ['NewLocation_Name', 'new_location_name', 'To_Location'], '-')),
+    Qty: Number(pickMoveField(d, ['Qty', 'qty', 'MoveQty', 'move_qty'], 0)) || 0,
+    Type: cleanVal(pickMoveField(d, ['Type', 'type'], '-')),
+    Type_cartons: cleanVal(pickMoveField(d, ['Type_cartons', 'type_cartons', 'TypeCartons'], '-'))
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
+  ws['!cols'] = headers.map(() => ({ wch: 12 }));
+
+  if (ws['A1']) {
+    ws['A1'].s = {
+      fill: {
+        patternType: 'solid',
+        fgColor: { rgb: 'D9E1F2' }
+      },
+      font: {
+        bold: true,
+        color: { rgb: '0F172A' }
+      }
+    };
+  }
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  const rawDocName = String(
+    pickMoveField(
+      selectedMoveItem,
+      ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Move_ID', 'Row ID'],
+      'stock_move'
+    )
+  ).trim();
+  const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_move';
+
+  XLSX.writeFile(wb, `${safeFileName}.xlsx`);
+  showMoveToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

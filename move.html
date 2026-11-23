@@ -103,7 +103,7 @@
       </div>
     </section>
 
-    <!-- Search, Date Filter & Export Bar -->
+    <!-- Search & Date Filter Bar -->
     <section class="panel" style="padding:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
       <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 540px;">
         <select id="moveSearchColumn" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:600;">
@@ -128,10 +128,6 @@
         <div class="mono txt-muted" style="font-size:12px;">
           SHOWING: <span id="moveShowingCount" class="txt-cyan" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);font-weight:700;">0</span>
         </div>
-        <button type="button" onclick="exportMoveToCSV()" class="btn btn-emerald-soft">
-          <span>⬇</span>
-          <span>Export CSV</span>
-        </button>
       </div>
     </section>
 
@@ -174,12 +170,19 @@
           </div>
           <button type="button" onclick="closeMoveDrawer()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
         </div>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
+          <button id="exportMoveXlsxBtn" type="button" onclick="exportSelectedMoveToXLSX()" class="btn btn-emerald-soft" style="width:100%;">
+            <span>⬇</span>
+            <span>Export Excel</span>
+          </button>
+        </div>
         <dl id="moveDrawerContent" style="margin:18px 0 0;display:flex;flex-direction:column;gap:10px;"></dl>
       </div>
       <button type="button" onclick="closeMoveDrawer()" class="btn btn-ghost" style="margin-top:20px;width:100%;">ปิดหน้าต่าง</button>
     </aside>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/move.js"></script>

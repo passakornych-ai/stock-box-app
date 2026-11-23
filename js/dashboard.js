@@ -270,9 +270,16 @@ function renderTable(rows) {
     const safeTypeCartons = escapeHtml(typeCartons);
     const safeLotNo = escapeHtml(lotNo);
     const safeLoc = escapeHtml(loc);
+    const jsSafePartName = String(partName).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     tr.innerHTML = `
-      <td class="txt-primary" style="font-weight:600;">${safePartName}</td>
+      <td class="mono txt-primary" style="font-weight:700;">
+        <div style="display:inline-flex;align-items:center;gap:8px;">
+          <span>${safePartName}</span>
+          <button type="button" onclick="copyText(event, '${jsSafePartName}')" class="btn btn-ghost"
+            style="padding:2px 8px;border-radius:6px;font-size:11px;">Copy</button>
+        </div>
+      </td>
       <td class="txt-secondary" style="font-size:13px;">${safeTypeCartons}</td>
       <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
       <td>
