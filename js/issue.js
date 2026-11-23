@@ -79,7 +79,6 @@ function clearIssueFilters() {
 
 function getIssueColumnValue(item, colKey) {
   const map = {
-    IssueNo: ['IssueNo', 'issue_no', 'Issue_NO'],
     IssueID: ['IssueID', 'issue_id', 'Issue_ID', 'ID', 'Row ID'],
     IssueDate: ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at'],
     LotNo: ['LotNo', 'lot_no', 'Lot_No'],
@@ -106,7 +105,7 @@ function sortIssueByColumn(colKey) {
 
 function initIssueSortableHeaders() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['IssueNo', 'IssueDate', 'CreatedBy','Qty'];
+  const keyByIndex = ['IssueID', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -120,8 +119,8 @@ function initIssueSortableHeaders() {
 
 function updateIssueSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
-  const keyByIndex = ['IssueNo', 'IssueDate', 'CreatedBy','Qty'];
-  const baseLabels = ['เลขที่เบิกใช้ ISSUENO', 'ISSUE DATE', 'ผู้สร้าง','QTY'];
+  const keyByIndex = ['IssueID', 'IssueDate', 'LotNo', 'Part_Name', 'Location_Name', 'Qty'];
+  const baseLabels = ['ISSUE ID', 'ISSUE DATE', 'LOTNO', 'PART_NAME', 'LOCATION', 'QTY'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
@@ -160,14 +159,14 @@ async function loadStockIssue() {
 
     const detailSumByIssId = {};
     issueDetailRows.forEach((d) => {
-      const iid = String(pickIssueField(d, ['IssueNo', 'issue_id', 'Issue_ID'], '')).trim();
+      const iid = String(pickIssueField(d, ['IssueID', 'issue_id', 'Issue_ID'], '')).trim();
       const dQty = Number(pickIssueField(d, ['Qty', 'qty', 'IssueQty', 'issue_qty', 'QtyBalance'], 0)) || 0;
       if (!iid) return;
       detailSumByIssId[iid] = (detailSumByIssId[iid] || 0) + dQty;
     });
 
     allIssueRows = (Array.isArray(issData) ? issData : []).map((row) => {
-      const iid = String(pickIssueField(row, ['IssueNo', 'issue_id', 'Issue_ID', 'Row ID'], '')).trim();
+      const iid = String(pickIssueField(row, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '')).trim();
       const rawQty = pickIssueField(row, ['Qty', 'qty', 'IssueQty', 'issue_qty', 'TotalQty', 'QtyBalance'], null);
       const computedQty =
         rawQty !== null && rawQty !== '-' && !Number.isNaN(Number(rawQty))
@@ -243,7 +242,7 @@ function getFilteredIssueRows(rows) {
   }
 
   const colKeyMap = {
-    IssueNo: ['IssueNo', 'issue_no', 'Issue_NO', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
+    IssueID: ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
     LotNo: ['LotNo', 'lot_no', 'Lot_No'],
     Part_Name: ['Part_Name', 'part_name', 'Product'],
     Location_Name: ['Location_Name', 'location_name', 'LocationID', 'location_id', 'From_Location']
@@ -296,7 +295,7 @@ function renderIssueTable(rows) {
 
   tbody.innerHTML = '';
   currentFilteredIssueRows.forEach((item, idx) => {
-    const issId = pickIssueField(item, ['IssueNo', 'issue_no', 'Issue_NO', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID']);
+    const issId = pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID']);
     const issDate = pickIssueField(item, ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at']);
     const lotNo = pickIssueField(item, ['LotNo', 'lot_no', 'Lot_No']);
     const partName = pickIssueField(item, ['Part_Name', 'part_name', 'Product']);
@@ -343,7 +342,7 @@ function openIssueDrawerByIndex(index) {
   if (!item) return;
 
   selectedIssueItem = item;
-  const issId = String(pickIssueField(item, ['IssueNo', 'issue_no', 'Issue_NO', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '-'));
+  const issId = String(pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '-'));
   document.getElementById('issueDrawerTitle').textContent = issId;
 
   const cleanEntries = Object.entries(item).filter(([k]) => !k.startsWith('__'));
@@ -359,7 +358,7 @@ function openIssueDrawerByIndex(index) {
     .join('');
 
   selectedIssueDetails = issueDetailRows.filter(
-    (d) => String(pickIssueField(d, ['IssueNo', 'issue_no', 'Issue_NO', 'IssueID', 'issue_id', 'Issue_ID'], '')).trim() === issId.trim()
+    (d) => String(pickIssueField(d, ['IssueID', 'issue_id', 'Issue_ID'], '')).trim() === issId.trim()
   );
 
   let detailsSectionHtml = '';
@@ -468,7 +467,7 @@ function exportSelectedIssueToXLSX() {
   const rawDocName = String(
     pickIssueField(
       selectedIssueItem,
-      ['IssueNo', 'issue_no', 'IssueNo', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
+      ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID'],
       'stock_issue'
     )
   ).trim();
