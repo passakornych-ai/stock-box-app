@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STOCK BOX OS // Import Receive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="js/theme.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-container header-inner">
+      <div class="header-brand">
+        <div style="width:38px;height:38px;border-radius:11px;background:var(--c-cyan-soft-bg);border:1px solid var(--c-cyan-soft-border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+          📥
+        </div>
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h1 class="txt-primary" style="margin:0;font-size:16px;font-weight:700;white-space:nowrap;">
+              IMPORT <span class="mono txt-cyan" style="font-size:13px;">RECEIVE</span>
+            </h1>
+            <span id="importDbBadge" class="mono status-pill-active" style="padding:2px 8px;font-size:11px;">
+              ● READY
+            </span>
+          </div>
+          <p class="txt-muted" style="margin:2px 0 0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            นำเข้าใบรับเข้าสินค้าจากไฟล์ Excel / CSV ลง Supabase
+          </p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="btn btn-ghost">
+          <span>☀️</span>
+          <span>โหมดสว่าง</span>
+        </button>
+        <a href="receive.html" class="btn btn-emerald-soft">
+          <span>←</span>
+          <span>รายการรับเข้า</span>
+        </a>
+        <a href="index.html" class="btn btn-ghost">
+          <span>📦</span>
+          <span>สต็อกคงเหลือ</span>
+        </a>
+        <button type="button" onclick="downloadReceiveTemplate()" class="btn btn-indigo-soft">
+          <span>⬇</span>
+          <span>ดาวน์โหลด Template</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container" style="padding-top:24px;padding-bottom:40px;display:flex;flex-direction:column;gap:20px;">
+
+    <!-- Header Info & File Upload -->
+    <section class="panel" style="padding:18px;display:flex;flex-direction:column;gap:16px;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+        <div>
+          <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">RECEIVE NO</label>
+          <input id="importReceiveNo" type="text" class="input-control mono" style="width:100%;" placeholder="ปล่อยว่างเพื่อสร้างอัตโนมัติ" />
+        </div>
+        <div>
+          <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">RECEIVE DATE</label>
+          <input id="importReceiveDate" type="datetime-local" class="input-control mono" style="width:100%;" />
+        </div>
+        <div>
+          <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">CREATED BY</label>
+          <input id="importCreatedBy" type="text" class="input-control" style="width:100%;" value="Admin" />
+        </div>
+        <div>
+          <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">DEFAULT LOCATION</label>
+          <input id="importDefaultLocation" type="text" class="input-control" style="width:100%;" value="ที่จัดเก็บชั่วคราว" />
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-top:8px;border-top:1px solid var(--border-subtle);">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+          <label class="btn btn-cyan" style="cursor:pointer;margin:0;">
+            <span>📂</span>
+            <span>เลือกไฟล์ Excel / CSV</span>
+            <input id="receiveFileInput" type="file" accept=".xlsx,.xls,.csv" style="display:none;" />
+          </label>
+          <span id="selectedFileName" class="mono txt-secondary" style="font-size:12px;">ยังไม่ได้เลือกไฟล์</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button type="button" onclick="clearImportedReceive()" class="btn btn-ghost">ล้างข้อมูล</button>
+          <button id="saveImportReceiveBtn" type="button" onclick="submitReceiveImport()" class="btn btn-emerald-soft" disabled>
+            <span>💾</span>
+            <span>บันทึกเข้า Supabase</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary KPIs -->
+    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="font-size:11px;text-transform:uppercase;">Preview Rows</div>
+        <div id="impKpiRows" class="mono txt-primary" style="margin-top:10px;font-size:28px;font-weight:700;">0</div>
+      </div>
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="font-size:11px;text-transform:uppercase;">Total Qty</div>
+        <div id="impKpiQty" class="mono txt-emerald" style="margin-top:10px;font-size:28px;font-weight:700;">0</div>
+      </div>
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="font-size:11px;text-transform:uppercase;">Valid Items</div>
+        <div id="impKpiValid" class="mono txt-cyan" style="margin-top:10px;font-size:28px;font-weight:700;">0</div>
+      </div>
+    </section>
+
+    <!-- Preview Table -->
+    <section class="panel" style="overflow:hidden;">
+      <div id="importStatusBanner" class="hidden mono txt-cyan" style="padding:10px 18px;background:var(--c-cyan-soft-bg);border-bottom:1px solid var(--c-cyan-soft-border);font-size:12px;">
+        ⟳ PROCESSING...
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>PART_NAME</th>
+              <th>LOTNO</th>
+              <th>LOCATION_NAME</th>
+              <th style="text-align:right;">QTY</th>
+              <th>TYPE</th>
+              <th>TYPE_CARTONS</th>
+            </tr>
+          </thead>
+          <tbody id="importPreviewBody">
+            <tr>
+              <td colspan="7" class="txt-muted" style="padding:44px 16px;text-align:center;">
+                เลือกไฟล์ Excel (.xlsx, .xls) หรือ .csv เพื่อดูตัวอย่างข้อมูลก่อนบันทึก
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/receive-import.js"></script>
+</body>
+</html>
