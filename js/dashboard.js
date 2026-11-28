@@ -68,6 +68,12 @@ const escapeHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+function renderSilentSpinnerHtml(large = false) {
+  const sizeClass = large ? 'spinner-ring spinner-ring-lg' : 'spinner-ring';
+  const wrapClass = large ? 'spinner-wrap-center' : 'spinner-wrap';
+  return `<div class="${wrapClass}" aria-hidden="true"><span class="${sizeClass}"></span></div>`;
+}
+
 function showToast(message) {
   let toast = document.getElementById('toastBox');
   if (!toast) {
@@ -169,7 +175,13 @@ async function loadDashboard() {
   const tbody = document.getElementById('stockTableBody');
   const badge = document.getElementById('dbStatusBadge');
 
-  loading?.classList.remove('hidden');
+  if (loading) {
+    loading.innerHTML = `<span class="spinner-ring"></span>`;
+    loading.classList.remove('hidden');
+  }
+  if (tbody && allStockRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">${renderSilentSpinnerHtml(true)}</td></tr>`;
+  }
 
   try {
     const client = getClient();

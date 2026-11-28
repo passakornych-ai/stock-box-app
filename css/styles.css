@@ -467,3 +467,41 @@ html:not([data-theme="light"]) .btn-emerald {
     border-radius: 10px;
   }
 }
+
+/* Silent Loading Spinner (no text) */
+.spinner-ring {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2.5px solid var(--border-subtle);
+  border-top-color: var(--c-cyan);
+  animation: silentSpin 0.75s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.spinner-ring-lg {
+  width: 34px;
+  height: 34px;
+  border-width: 3px;
+}
+
+.spinner-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+}
+
+.spinner-wrap-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44px 16px;
+}
+
+@keyframes silentSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
