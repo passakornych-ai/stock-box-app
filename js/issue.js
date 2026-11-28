@@ -20,9 +20,9 @@ const ISSUE_HEADER_LABELS = {
 };
 
 const ISSUE_DETAIL_LABELS = {
-  order_number: 'เลขที่ Order',
+  order_number: 'Order',
   service_tag: 'Service Tag',
-  part_name: 'ชื่อสินค้า / รุ่น',
+  part_name: 'Carton Part No.',
   lotno: 'Lot No.',
   lot_no: 'Lot No.',
   location_name: 'Location',
