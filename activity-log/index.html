@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STOCK BOX OS // Activity Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css" />
+  <script src="../js/theme.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-container header-inner">
+      <div class="header-brand">
+        <div style="width:38px;height:38px;border-radius:11px;background:var(--c-cyan-soft-bg);border:1px solid var(--c-cyan-soft-border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+          🕒
+        </div>
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h1 class="txt-primary" style="margin:0;font-size:16px;font-weight:700;white-space:nowrap;">
+              ACTIVITY <span class="mono txt-cyan" style="font-size:13px;">LOG</span>
+            </h1>
+            <span id="logStatusBadge" class="mono status-pill-active" style="padding:2px 8px;font-size:11px;">
+              ● MONTHLY VIEW
+            </span>
+          </div>
+          <p class="txt-muted" style="margin:2px 0 0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            ประวัติการใช้งานและทุกการเคลื่อนไหว แยกแสดงผลแบบรายเดือน
+          </p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="btn btn-ghost">
+          <span>☀️</span>
+          <span>โหมดสว่าง</span>
+        </button>
+        <a href="../" class="btn btn-ghost">
+          <span>←</span>
+          <span>สต็อกคงเหลือ</span>
+        </a>
+        <a href="../receive/" class="btn btn-ghost">
+          <span>📥</span>
+          <span>รับเข้าสินค้า</span>
+        </a>
+        <a href="../issue/" class="btn btn-ghost">
+          <span>📤</span>
+          <span>เบิกออก</span>
+        </a>
+        <a href="../move/" class="btn btn-ghost">
+          <span>🔀</span>
+          <span>ย้ายสินค้า</span>
+        </a>
+        <a href="../location/" class="btn btn-indigo-soft">
+          <span>📍</span>
+          <span>ผัง Location</span>
+        </a>
+        <button type="button" onclick="exportLogsToExcel()" class="btn btn-emerald-soft">
+          <span>⬇</span>
+          <span>Export Excel</span>
+        </button>
+        <button id="refreshLogBtn" type="button" onclick="loadActivityLogs()" class="btn btn-cyan">
+          <span>↻</span>
+          <span>รีเฟรช</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container" style="padding-top:24px;padding-bottom:44px;display:flex;flex-direction:column;gap:20px;">
+
+    <!-- KPI Cards -->
+    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Total Activities</span>
+          <span class="txt-cyan">●</span>
+        </div>
+        <div id="logKpiTotal" class="mono txt-primary" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">จำนวนประวัติทั้งหมดที่กรองได้</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Active Months</span>
+          <span class="txt-indigo">●</span>
+        </div>
+        <div id="logKpiMonths" class="mono txt-indigo" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">จำนวนเดือนที่มีบันทึกการใช้งาน</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Selected Month</span>
+          <span class="txt-emerald">●</span>
+        </div>
+        <div id="logKpiCurrentMonth" class="mono txt-emerald" style="margin-top:12px;font-size:20px;font-weight:700;">ทุกเดือน</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">ช่วงเดือนที่กำลังแสดงผล</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Last Sync</span>
+          <span class="txt-amber">●</span>
+        </div>
+        <div id="logKpiLastSync" class="mono txt-amber" style="margin-top:12px;font-size:22px;font-weight:700;">--:--:--</div>
+        <div id="logKpiStatusText" class="txt-muted" style="margin-top:4px;font-size:12px;">พร้อมแสดงประวัติ</div>
+      </div>
+    </section>
+
+    <!-- Month Selector & Filters -->
+    <section class="panel" style="padding:16px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 560px;">
+          <select id="logMonthFilter" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:700;">
+            <option value="all">ทุกเดือน (ALL MONTHS)</option>
+          </select>
+
+          <select id="logPageFilter" class="select-control" style="font-size:13px;">
+            <option value="all">ทุกหน้า (ALL PAGES)</option>
+            <option value="Dashboard">Dashboard</option>
+            <option value="Stock Manage">Stock Manage</option>
+            <option value="Receive Import">Receive Import</option>
+            <option value="Receive">Receive</option>
+            <option value="Issue">Issue</option>
+            <option value="Move">Move</option>
+            <option value="Location">Location</option>
+          </select>
+
+          <select id="logActionFilter" class="select-control mono" style="font-size:12.5px;">
+            <option value="all">ทุกการกระทำ (ALL ACTIONS)</option>
+            <option value="CREATE">CREATE / ADD</option>
+            <option value="UPDATE">UPDATE / EDIT</option>
+            <option value="DELETE">DELETE</option>
+            <option value="IMPORT">IMPORT</option>
+            <option value="EXPORT">EXPORT</option>
+            <option value="UNLOCK">UNLOCK / PIN</option>
+            <option value="SYNC">SYNC / VIEW</option>
+          </select>
+
+          <div style="position:relative;flex:1 1 200px;">
+            <input id="logSearchInput" type="text" class="input-control" style="width:100%;padding-right:34px;"
+              placeholder="ค้นหารายละเอียด, หน้า, ผู้ใช้งาน..." />
+            <button id="clearLogSearchBtn" type="button" onclick="clearLogFilters()" title="ล้างตัวกรอง"
+              class="hidden btn btn-ghost" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:3px 8px;font-size:11px;">✕</button>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="mono txt-muted" style="font-size:12px;">
+            LOGS: <span id="logShowingCount" class="txt-cyan" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);font-weight:700;">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Month Quick Tabs -->
+      <div id="monthQuickTabs" style="display:flex;flex-wrap:wrap;gap:8px;padding-top:10px;border-top:1px solid var(--border-subtle);"></div>
+    </section>
+
+    <!-- Monthly Grouped Log Sections -->
+    <div id="logLoadingBanner" class="hidden spinner-wrap" aria-hidden="true">
+      <span class="spinner-ring spinner-ring-lg"></span>
+    </div>
+
+    <div id="monthlyLogSections" style="display:flex;flex-direction:column;gap:20px;"></div>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/activity-logger.js"></script>
+  <script src="../js/activity-log.js"></script>
+</body>
+</html>
