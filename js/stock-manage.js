@@ -657,3 +657,68 @@ document.addEventListener('DOMContentLoaded', () => {
   loadLocationDatalist();
   loadStockManage();
 });
+
+// เปลี่ยนรหัส PIN ตรงนี้ (ให้ตรงกับหน้า Dashboard)
+  const ACTION_PIN_CODE = '1234';
+  let pendingPinCallback = null;
+  let pendingDeleteResolver = null;
+
+  function openPinActionModal(event, onSuccess, titleText = 'กรอกรหัส PIN') {
+    if (event) event.preventDefault();
+    pendingPinCallback = typeof onSuccess === 'function' ? onSuccess : null;
+
+    const modal = document.getElementById('pinGuardModal');
+    const input = document.getElementById('pinGuardInput');
+    const errEl = document.getElementById('pinGuardError');
+    const titleEl = document.getElementById('pinGuardTitle');
+
+    if (titleEl) titleEl.textContent = titleText;
+    if (errEl) errEl.classList.add('hidden');
+    if (input) {
+      input.value = '';
+      modal?.classList.remove('hidden');
+      setTimeout(() => input.focus(), 30);
+    }
+    return false;
+  }
+
+  function closePinGuardModal() {
+    pendingPinCallback = null;
+    document.getElementById('pinGuardModal')?.classList.add('hidden');
+  }
+
+  function verifyPinGuard() {
+    const input = document.getElementById('pinGuardInput');
+    const errEl = document.getElementById('pinGuardError');
+    const entered = (input?.value || '').trim();
+
+    if (entered === ACTION_PIN_CODE) {
+      const cb = pendingPinCallback;
+      closePinGuardModal();
+      if (cb) cb();
+    } else {
+      errEl?.classList.remove('hidden');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+  }
+
+  function openCustomDeleteConfirm(message) {
+    return new Promise((resolve) => {
+      pendingDeleteResolver = resolve;
+      const msgEl = document.getElementById('confirmDeleteMessage');
+      if (msgEl) msgEl.textContent = message;
+      document.getElementById('confirmDeleteModal')?.classList.remove('hidden');
+    });
+  }
+
+  function resolveDeleteConfirm(confirmed) {
+    document.getElementById('confirmDeleteModal')?.classList.add('hidden');
+    if (typeof pendingDeleteResolver === 'function') {
+      const fn = pendingDeleteResolver;
+      pendingDeleteResolver = null;
+      fn(Boolean(confirmed));
+    }
+  }
