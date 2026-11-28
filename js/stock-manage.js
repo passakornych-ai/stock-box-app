@@ -578,9 +578,10 @@ async function deleteSingleStockRow(filteredIndex) {
 
   const partName = pickMgrField(item, ['Part_Name', 'part_name'], 'รายการนี้');
   const loc = pickMgrField(item, ['Location_Name', 'location_name'], '-');
-  if (!confirm(`ยืนยันการลบ "${partName}" (Location: ${loc}) ออกจากตาราง stock_box ?`)) {
-    return;
-  }
+  const confirmed = await openCustomDeleteConfirm(
+    `ยืนยันการลบ "${partName}" (Location: ${loc}) ออกจากตาราง stock_box ?`
+  );
+  if (!confirmed) return;
 
   const pk = resolvePrimaryKeyInfo(item);
   if (!pk) {
@@ -608,9 +609,10 @@ async function deleteSelectedStockRows() {
   );
 
   if (!targets.length) return;
-  if (!confirm(`ยืนยันการลบข้อมูลที่เลือกทั้งหมด ${targets.length} รายการ ออกจากตาราง stock_box ?`)) {
-    return;
-  }
+  const confirmed = await openCustomDeleteConfirm(
+    `ยืนยันการลบข้อมูลที่เลือกทั้งหมด ${targets.length} รายการ ออกจากตาราง stock_box ?`
+  );
+  if (!confirmed) return;
 
   try {
     const client = getMgrClient();
