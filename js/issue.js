@@ -89,6 +89,12 @@ const escapeIssueHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+function renderSilentIssueSpinnerHtml(large = false) {
+  const sizeClass = large ? 'spinner-ring spinner-ring-lg' : 'spinner-ring';
+  const wrapClass = large ? 'spinner-wrap-center' : 'spinner-wrap';
+  return `<div class="${wrapClass}" aria-hidden="true"><span class="${sizeClass}"></span></div>`;
+}
+
 function renderFilteredColumnsList(obj, excludedSet, labelMap = {}) {
   const entries = Object.entries(obj || {}).filter(
     ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeKey(k))
@@ -207,7 +213,13 @@ async function loadStockIssue() {
   const tbody = document.getElementById('issueTableBody');
   const badge = document.getElementById('issueStatusBadge') || document.getElementById('dbStatusBadge');
 
-  loading?.classList.remove('hidden');
+  if (loading) {
+    loading.innerHTML = `<span class="spinner-ring"></span>`;
+    loading.classList.remove('hidden');
+  }
+  if (tbody && allIssueRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">${renderSilentIssueSpinnerHtml(true)}</td></tr>`;
+  }
 
   try {
     const client = getIssueClient();
@@ -415,7 +427,7 @@ function openIssueDrawerByIndex(index) {
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
           <div class="mono txt-amber" style="font-size:11px;font-weight:700;margin-bottom:6px;">
-            CASE ID${dIdx + 1}
+            CASE ID ${dIdx + 1}
           </div>
           <div>${renderFilteredColumnsList(d, EXCLUDED_ISSUE_DETAIL_KEYS, ISSUE_DETAIL_LABELS)}</div>
         </div>

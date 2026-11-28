@@ -90,6 +90,12 @@ const escapeHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+function renderSilentReceiveSpinnerHtml(large = false) {
+  const sizeClass = large ? 'spinner-ring spinner-ring-lg' : 'spinner-ring';
+  const wrapClass = large ? 'spinner-wrap-center' : 'spinner-wrap';
+  return `<div class="${wrapClass}" aria-hidden="true"><span class="${sizeClass}"></span></div>`;
+}
+
 function renderFilteredReceiveColumnsList(obj, excludedSet, labelMap = {}) {
   const entries = Object.entries(obj || {}).filter(
     ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeReceiveKey(k))
@@ -208,7 +214,13 @@ async function loadStockReceive() {
   const tbody = document.getElementById('receiveTableBody');
   const badge = document.getElementById('receiveStatusBadge') || document.getElementById('dbStatusBadge');
 
-  loading?.classList.remove('hidden');
+  if (loading) {
+    loading.innerHTML = `<span class="spinner-ring"></span>`;
+    loading.classList.remove('hidden');
+  }
+  if (tbody && allReceiveRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">${renderSilentReceiveSpinnerHtml(true)}</td></tr>`;
+  }
 
   try {
     const client = getClient();
@@ -416,7 +428,7 @@ function openReceiveDrawerByIndex(index) {
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
           <div class="mono txt-emerald" style="font-size:11px;font-weight:700;margin-bottom:6px;">
-            ITEM ID${dIdx + 1}
+            ITEM ID ${dIdx + 1}
           </div>
           <div>${renderFilteredReceiveColumnsList(d, EXCLUDED_RECEIVE_DETAIL_KEYS, RECEIVE_DETAIL_LABELS)}</div>
         </div>

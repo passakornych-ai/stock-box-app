@@ -137,8 +137,8 @@
 
     <!-- Data Table -->
     <section class="panel" style="overflow:hidden;">
-      <div id="moveLoadingBanner" class="hidden mono txt-cyan" style="padding:10px 18px;background:var(--c-cyan-soft-bg);border-bottom:1px solid var(--c-cyan-soft-border);font-size:12px;">
-        ⟳ SYNCING STOCK MOVE FROM SUPABASE...
+      <div id="moveLoadingBanner" class="hidden spinner-wrap" aria-hidden="true">
+        <span class="spinner-ring"></span>
       </div>
 
       <div style="overflow-x:auto;">
@@ -153,7 +153,11 @@
           </thead>
           <tbody id="moveTableBody">
             <tr>
-              <td colspan="4" class="txt-muted" style="padding:44px 16px;text-align:center;">กำลังโหลดข้อมูลการย้ายสินค้า...</td>
+              <td colspan="4" style="text-align:center;">
+                <div class="spinner-wrap-center" aria-hidden="true">
+                  <span class="spinner-ring spinner-ring-lg"></span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>

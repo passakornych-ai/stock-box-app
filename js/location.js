@@ -36,6 +36,12 @@ const escapeHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+function renderSilentLocationSpinnerHtml(large = false) {
+  const sizeClass = large ? 'spinner-ring spinner-ring-lg' : 'spinner-ring';
+  const wrapClass = large ? 'spinner-wrap-center' : 'spinner-wrap';
+  return `<div class="${wrapClass}" aria-hidden="true"><span class="${sizeClass}"></span></div>`;
+}
+
 function ensureLocationModal() {
   let modal = document.getElementById('locationDetailModal');
   if (modal) return modal;
@@ -126,7 +132,10 @@ function closeLocationModal() {
 async function loadLocationMatrix() {
   const loading = document.getElementById('locLoading');
   const grid = document.getElementById('locationGrid');
-  loading?.classList.remove('hidden');
+  if (loading) {
+    loading.innerHTML = renderSilentLocationSpinnerHtml(true);
+    loading.classList.remove('hidden');
+  }
   if (grid) grid.innerHTML = '';
 
   try {

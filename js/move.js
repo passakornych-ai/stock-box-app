@@ -77,6 +77,12 @@ const escapeMoveHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
+function renderSilentMoveSpinnerHtml(large = false) {
+  const sizeClass = large ? 'spinner-ring spinner-ring-lg' : 'spinner-ring';
+  const wrapClass = large ? 'spinner-wrap-center' : 'spinner-wrap';
+  return `<div class="${wrapClass}" aria-hidden="true"><span class="${sizeClass}"></span></div>`;
+}
+
 function renderFilteredMoveColumnsList(obj, excludedSet, labelMap = {}) {
   const entries = Object.entries(obj || {}).filter(
     ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeMoveKey(k))
@@ -195,7 +201,13 @@ async function loadStockMove() {
   const tbody = document.getElementById('moveTableBody');
   const badge = document.getElementById('moveStatusBadge') || document.getElementById('dbStatusBadge');
 
-  loading?.classList.remove('hidden');
+  if (loading) {
+    loading.innerHTML = `<span class="spinner-ring"></span>`;
+    loading.classList.remove('hidden');
+  }
+  if (tbody && allMoveRows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">${renderSilentMoveSpinnerHtml(true)}</td></tr>`;
+  }
 
   try {
     const client = getMoveClient();
@@ -403,7 +415,7 @@ function openMoveDrawerByIndex(index) {
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
           <div class="mono txt-indigo" style="font-size:11px;font-weight:700;margin-bottom:6px;">
-            ITEM ID${dIdx + 1}
+            ITEM ID ${dIdx + 1}
           </div>
           <div>${renderFilteredMoveColumnsList(d, EXCLUDED_MOVE_DETAIL_KEYS, MOVE_DETAIL_LABELS)}</div>
         </div>

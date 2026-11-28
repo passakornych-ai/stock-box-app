@@ -249,8 +249,10 @@ async function submitReceiveImport() {
   const saveBtn = document.getElementById('saveImportReceiveBtn');
 
   try {
-    banner?.classList.remove('hidden');
-    if (banner) banner.textContent = '⟳ SAVING RECEIVE HEADER & DETAILS TO SUPABASE...';
+    if (banner) {
+      banner.innerHTML = `<span class="spinner-ring"></span>`;
+      banner.classList.remove('hidden');
+    }
     if (saveBtn) saveBtn.disabled = true;
 
     const receiveId = generateRandomId(8);
