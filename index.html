@@ -58,6 +58,11 @@
           <span>📍</span>
           <span>ผัง Location</span>
         </a>
+        <a href="./stock-manage/" class="btn btn-ghost" onclick="openImportPinModal(event)" class="btn btn-ghost"></a>
+          <span>🛠️</span>
+          <span>จัดการสต็อก</span>
+        </a>
+
         <button id="refreshBtn" type="button" onclick="loadDashboard()" class="btn btn-cyan">
           <span>↻</span>
           <span>รีเฟรช</span>
@@ -193,6 +198,54 @@
       <button type="button" onclick="closeDrawer()" class="btn btn-ghost" style="margin-top:20px;width:100%;">ปิดหน้าต่าง</button>
     </aside>
   </div>
+
+  <script>
+  // เปลี่ยนรหัส PIN ที่ต้องการใช้งานตรงนี้
+  const IMPORT_ACCESS_PIN = '1234';
+  const IMPORT_UNLOCK_KEY = 'stockbox_import_unlocked';
+  let pendingImportHref = '../receive-import/';
+
+  function openImportPinModal(event) {
+    event?.preventDefault();
+    pendingImportHref = event?.currentTarget?.getAttribute('href') || '../receive-import/';
+
+    // ล้างสถานะปลดล็อกเดิมทุกครั้งที่กด เพื่อบังคับถามรหัสใหม่ทุกครั้ง
+    sessionStorage.removeItem(IMPORT_UNLOCK_KEY);
+
+    const modal = document.getElementById('importPinModal');
+    const input = document.getElementById('importPinInput');
+    const errEl = document.getElementById('importPinError');
+    if (errEl) errEl.classList.add('hidden');
+    if (input) {
+      input.value = '';
+      modal?.classList.remove('hidden');
+      setTimeout(() => input.focus(), 30);
+    }
+    return false;
+  }
+
+  function closeImportPinModal() {
+    document.getElementById('importPinModal')?.classList.add('hidden');
+  }
+
+  function verifyImportPin() {
+    const input = document.getElementById('importPinInput');
+    const errEl = document.getElementById('importPinError');
+    const entered = (input?.value || '').trim();
+
+    if (entered === IMPORT_ACCESS_PIN) {
+      sessionStorage.setItem(IMPORT_UNLOCK_KEY, '1');
+      closeImportPinModal();
+      window.location.href = pendingImportHref;
+    } else {
+      errEl?.classList.remove('hidden');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+  }
+</script>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

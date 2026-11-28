@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STOCK BOX OS // Stock Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/styles.css" />
+  <script src="../js/theme.js"></script>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-container header-inner">
+      <div class="header-brand">
+        <div style="width:38px;height:38px;border-radius:11px;background:var(--c-cyan-soft-bg);border:1px solid var(--c-cyan-soft-border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+          🛠️
+        </div>
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <h1 class="txt-primary" style="margin:0;font-size:16px;font-weight:700;white-space:nowrap;">
+              STOCK <span class="mono txt-cyan" style="font-size:13px;">MANAGE</span>
+            </h1>
+            <span id="dbStatusBadge" class="mono status-pill-active" style="padding:2px 8px;font-size:11px;">
+              ● LIVE
+            </span>
+          </div>
+          <p class="txt-muted" style="margin:2px 0 0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            เพิ่ม แก้ไข และลบข้อมูลตาราง stock_box โดยตรง
+          </p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="themeToggleBtn" type="button" onclick="toggleTheme()" class="btn btn-ghost">
+          <span>☀️</span>
+          <span>โหมดสว่าง</span>
+        </button>
+        <a href="../" class="btn btn-ghost">
+          <span>←</span>
+          <span>สต็อกคงเหลือ</span>
+        </a>
+        <a id="importReceiveLink" href="../receive-import/" onclick="openImportPinModal(event)" class="btn btn-ghost">
+          <span>📥</span>
+          <span>เพิ่มเข้าสินค้า</span>
+        </a>
+        <button type="button" onclick="openStockEditModal(null)" class="btn btn-emerald-soft">
+          <span>＋</span>
+          <span>เพิ่มรายการใหม่</span>
+        </button>
+        <button id="refreshBtn" type="button" onclick="loadStockManage()" class="btn btn-cyan">
+          <span>↻</span>
+          <span>รีเฟรช</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container" style="padding-top:24px;padding-bottom:40px;display:flex;flex-direction:column;gap:20px;">
+
+    <!-- KPI Cards -->
+    <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Total Records</span>
+          <span class="txt-cyan">●</span>
+        </div>
+        <div id="mgrKpiTotalBoxes" class="mono txt-primary" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">จำนวนรายการกล่องทั้งหมด</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Total Qty Balance</span>
+          <span class="txt-emerald">●</span>
+        </div>
+        <div id="mgrKpiTotalQty" class="mono txt-emerald" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">ยอดรวมสินค้าคงเหลือ</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Empty Records (Qty = 0)</span>
+          <span class="txt-amber">●</span>
+        </div>
+        <div id="mgrKpiEmptyCount" class="mono txt-amber" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">รายการที่ยอดคงเหลือเป็น 0</div>
+      </div>
+
+      <div class="panel kpi-card">
+        <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
+          <span>Last Sync</span>
+          <span class="txt-indigo">●</span>
+        </div>
+        <div id="mgrKpiLastSync" class="mono txt-indigo" style="margin-top:12px;font-size:22px;font-weight:700;">--:--:--</div>
+        <div id="mgrKpiStatusText" class="txt-muted" style="margin-top:4px;font-size:12px;">พร้อมจัดการข้อมูล</div>
+      </div>
+    </section>
+
+    <!-- Search, Filter & Bulk Actions Bar -->
+    <section class="panel" style="padding:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 540px;">
+        <select id="mgrSearchColumn" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:600;">
+          <option value="all">ALL COLUMNS</option>
+          <option value="Part_Name">CARTON PART NO.</option>
+          <option value="Type_cartons">TYPE_CARTONS</option>
+          <option value="LotNo">LOT</option>
+          <option value="Location_Name">LOCATION</option>
+        </select>
+
+        <div style="position:relative;flex:1 1 200px;">
+          <input id="mgrSearchInput" type="text" class="input-control" style="width:100%;padding-right:34px;"
+            placeholder="พิมพ์คำค้นหาตามคอลัมน์ที่เลือก..." />
+          <button id="clearMgrSearchBtn" type="button" onclick="clearMgrFilters()" title="ล้างตัวกรอง"
+            class="hidden btn btn-ghost" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:3px 8px;font-size:11px;">✕</button>
+        </div>
+
+        <select id="mgrStatusFilter" class="select-control" style="font-size:13px;">
+          <option value="all">ทุกสถานะ</option>
+          <option value="available">พร้อมใช้ (Qty &gt; 0)</option>
+          <option value="empty">หมด (Qty = 0)</option>
+        </select>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
+        <div class="mono txt-muted" style="font-size:12px;">
+          SHOWING: <span id="mgrShowingCount" class="txt-cyan" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);font-weight:700;">0</span>
+        </div>
+
+        <button id="bulkDeleteBtn" type="button" onclick="deleteSelectedStockRows()" class="hidden btn btn-ghost"
+          style="border-color:#fda4af;color:#e11d48;background:rgba(225,29,72,0.08);">
+          <span>🗑️</span>
+          <span>ลบที่เลือก (<span id="selectedRowsCount">0</span>)</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Data Table -->
+    <section class="panel" style="overflow:hidden;">
+      <div id="mgrLoadingBanner" class="hidden spinner-wrap" aria-hidden="true">
+        <span class="spinner-ring"></span>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:42px;text-align:center;">
+                <input id="selectAllRowsCheckbox" type="checkbox" onchange="toggleSelectAllRows(this.checked)"
+                  style="width:16px;height:16px;cursor:pointer;accent-color:var(--c-cyan);" title="เลือกทั้งหมดในหน้านี้" />
+              </th>
+              <th>CARTON PART NO.</th>
+              <th>TYPE_CARTONS</th>
+              <th>LOT</th>
+              <th>LOCATION</th>
+              <th style="text-align:right;">QTY</th>
+              <th style="text-align:center;">STATUS</th>
+              <th style="text-align:right;">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody id="mgrTableBody">
+            <tr>
+              <td colspan="8" style="text-align:center;">
+                <div class="spinner-wrap-center" aria-hidden="true">
+                  <span class="spinner-ring spinner-ring-lg"></span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Create / Edit Modal -->
+  <div id="stockEditModal" class="hidden" style="position:fixed;inset:0;z-index:60;">
+    <div onclick="closeStockEditModal()" style="position:fixed;inset:0;background:rgba(15,23,42,0.55);"></div>
+    <div style="position:relative;z-index:10;max-width:520px;margin:64px auto 24px;padding:0 16px;">
+      <form id="stockEditForm" onsubmit="saveStockBoxRecord(event)" class="modal-card" style="padding:22px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--border-subtle);">
+          <div>
+            <div id="editModalBadge" class="mono txt-cyan" style="font-size:11px;font-weight:700;">EDIT STOCK_BOX</div>
+            <h2 id="editModalTitle" class="txt-primary" style="margin:3px 0 0;font-size:17px;font-weight:700;">แก้ไขข้อมูลสต็อก</h2>
+          </div>
+          <button type="button" onclick="closeStockEditModal()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
+        </div>
+
+        <input type="hidden" id="editRowIndex" value="" />
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;">
+          <div>
+            <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">CARTON PART NO. *</label>
+            <input id="fieldPartName" type="text" required class="input-control mono" style="width:100%;" placeholder="เช่น DELL-U2424H" />
+          </div>
+
+          <div>
+            <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">TYPE_CARTONS</label>
+            <input id="fieldTypeCartons" type="text" class="input-control" style="width:100%;" placeholder="เช่น Monitor, Notebook" />
+          </div>
+
+          <div>
+            <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">LOT</label>
+            <input id="fieldLotNo" type="text" class="input-control mono" style="width:100%;" placeholder="เช่น 2026-11-28" />
+          </div>
+
+          <div>
+            <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">LOCATION *</label>
+            <input id="fieldLocationName" type="text" required list="locationOptionsList" class="input-control mono" style="width:100%;" placeholder="เช่น TC302/1" />
+            <datalist id="locationOptionsList"></datalist>
+          </div>
+
+          <div>
+            <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">QTY BALANCE *</label>
+            <input id="fieldQtyBalance" type="number" min="0" step="1" required class="input-control mono" style="width:100%;" placeholder="0" />
+          </div>
+
+          <div>
+            <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">REMARK</label>
+            <input id="fieldRemark" type="text" class="input-control" style="width:100%;" placeholder="หมายเหตุ (ถ้ามี)" />
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:8px;padding-top:12px;border-top:1px solid var(--border-subtle);">
+          <button type="button" onclick="closeStockEditModal()" class="btn btn-ghost">ยกเลิก</button>
+          <button id="saveStockModalBtn" type="submit" class="btn btn-cyan">
+            <span>💾</span>
+            <span>บันทึกข้อมูล</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  // เปลี่ยนรหัส PIN ที่ต้องการใช้งานตรงนี้
+  const IMPORT_ACCESS_PIN = '1234';
+  const IMPORT_UNLOCK_KEY = 'stockbox_import_unlocked';
+  let pendingImportHref = '../receive-import/';
+
+  function openImportPinModal(event) {
+    event?.preventDefault();
+    pendingImportHref = event?.currentTarget?.getAttribute('href') || '../receive-import/';
+
+    // ล้างสถานะปลดล็อกเดิมทุกครั้งที่กด เพื่อบังคับถามรหัสใหม่ทุกครั้ง
+    sessionStorage.removeItem(IMPORT_UNLOCK_KEY);
+
+    const modal = document.getElementById('importPinModal');
+    const input = document.getElementById('importPinInput');
+    const errEl = document.getElementById('importPinError');
+    if (errEl) errEl.classList.add('hidden');
+    if (input) {
+      input.value = '';
+      modal?.classList.remove('hidden');
+      setTimeout(() => input.focus(), 30);
+    }
+    return false;
+  }
+
+  function closeImportPinModal() {
+    document.getElementById('importPinModal')?.classList.add('hidden');
+  }
+
+  function verifyImportPin() {
+    const input = document.getElementById('importPinInput');
+    const errEl = document.getElementById('importPinError');
+    const entered = (input?.value || '').trim();
+
+    if (entered === IMPORT_ACCESS_PIN) {
+      sessionStorage.setItem(IMPORT_UNLOCK_KEY, '1');
+      closeImportPinModal();
+      window.location.href = pendingImportHref;
+    } else {
+      errEl?.classList.remove('hidden');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+  }
+</script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/stock-manage.js"></script>
+</body>
+</html>
