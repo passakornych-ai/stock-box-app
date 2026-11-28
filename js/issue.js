@@ -1,3 +1,5 @@
+
+javascript
 let allIssueRows = [];
 let currentFilteredIssueRows = [];
 let issueDetailRows = [];
@@ -160,7 +162,7 @@ function updateIssueSortIndicators() {
 async function loadStockIssue() {
   const loading = document.getElementById('issueLoadingBanner');
   const tbody = document.getElementById('issueTableBody');
-  const badge = document.getElementById('issueStatusBadge');
+  const badge = document.getElementById('issueStatusBadge') || document.getElementById('dbStatusBadge');
 
   loading?.classList.remove('hidden');
 
@@ -444,10 +446,8 @@ function exportSelectedIssueToXLSX() {
 
   const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
 
-  // กำหนดความกว้างทุกคอลัมน์เป็น 12
   ws['!cols'] = headers.map(() => ({ wch: 12 }));
 
-  // ใส่สีให้หัวตารางช่องที่ 1 (A1)
   if (ws['A1']) {
     ws['A1'].s = {
       fill: {
