@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>STOCK BOX OS // Command Center</title>
+  <title>STOCK BOX OS // Stock Issue</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css" />
-  <script src="js/theme.js"></script>
+  <link rel="stylesheet" href="../css/styles.css" />
+  <script src="../js/theme.js"></script>
 </head>
 <body>
 
@@ -16,19 +16,19 @@
     <div class="app-container header-inner">
       <div class="header-brand">
         <div style="width:38px;height:38px;border-radius:11px;background:var(--c-cyan-soft-bg);border:1px solid var(--c-cyan-soft-border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
-          📦
+          📤
         </div>
         <div style="min-width:0;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <h1 class="txt-primary" style="margin:0;font-size:16px;font-weight:700;white-space:nowrap;">
-              STOCK BOX <span class="mono txt-cyan" style="font-size:13px;">OS</span>
+              STOCK <span class="mono txt-cyan" style="font-size:13px;">ISSUE</span>
             </h1>
             <span id="dbStatusBadge" class="mono status-pill-active" style="padding:2px 8px;font-size:11px;">
               ● LIVE
             </span>
           </div>
           <p class="txt-muted" style="margin:2px 0 0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            ระบบจัดการคลังสินค้า & สต็อกกล่องแบบเรียลไทม์
+            รายการเบิกจ่ายสินค้าออกจากคลังแบบเรียลไทม์
           </p>
         </div>
       </div>
@@ -38,27 +38,23 @@
           <span>☀️</span>
           <span>โหมดสว่าง</span>
         </button>
-        <a href="./receive/" class="btn btn-ghost">
+        <a href="../" class="btn btn-emerald-soft">
+          <span>←</span>
+          <span>สต็อกคงเหลือ</span>
+        </a>
+        <a href="../receive/" class="btn btn-ghost">
           <span>📥</span>
           <span>รับเข้าสินค้า</span>
         </a>
-        <a href="./receive-import/" class="btn btn-ghost">
-          <span>📥+</span>
-          <span>Import Receive</span>
-        </a>
-        <a href="./issue/" class="btn btn-ghost">
-          <span>📤</span>
-          <span>เบิกออก</span>
-        </a>
-        <a href="./move/" class="btn btn-ghost">
+        <a href="../move/" class="btn btn-ghost">
           <span>🔀</span>
           <span>ย้ายสินค้า</span>
         </a>
-        <a href="./location/" class="btn btn-indigo-soft">
+        <a href="../location/" class="btn btn-indigo-soft">
           <span>📍</span>
           <span>ผัง Location</span>
         </a>
-        <button id="refreshBtn" type="button" onclick="loadDashboard()" class="btn btn-cyan">
+        <button id="refreshBtn" type="button" onclick="loadStockIssue()" class="btn btn-cyan">
           <span>↻</span>
           <span>รีเฟรช</span>
         </button>
@@ -66,104 +62,95 @@
     </div>
   </header>
 
+
   <main class="app-container" style="padding-top:24px;padding-bottom:40px;display:flex;flex-direction:column;gap:20px;">
 
     <!-- KPI Cards -->
     <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
       <div class="panel kpi-card">
         <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
-          <span>Total Boxes</span>
+          <span>Issue Records</span>
           <span class="txt-cyan">●</span>
         </div>
-        <div id="kpiTotalBoxes" class="mono txt-primary" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
-        <div class="txt-muted" style="margin-top:4px;font-size:12px;">จำนวนรายการกล่องในระบบ</div>
+        <div id="issKpiTotalDocs" class="mono txt-primary" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">จำนวนรายการเบิกออกทั้งหมด</div>
       </div>
 
       <div class="panel kpi-card">
         <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
-          <span>Total Qty Balance</span>
-          <span class="txt-emerald">●</span>
+          <span>Total Issued Qty</span>
+          <span class="txt-amber">●</span>
         </div>
-        <div id="kpiTotalQty" class="mono txt-emerald" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
-        <div class="txt-muted" style="margin-top:4px;font-size:12px;">ยอดรวมจำนวนสินค้าคงเหลือ</div>
+        <div id="issKpiTotalQty" class="mono txt-amber" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">ยอดรวมจำนวนที่เบิกออก</div>
       </div>
 
       <div class="panel kpi-card">
         <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
-          <span>Active Locations</span>
+          <span>Today Records</span>
           <span class="txt-indigo">●</span>
         </div>
-        <div id="kpiActiveLocs" class="mono txt-indigo" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
-        <div class="txt-muted" style="margin-top:4px;font-size:12px;">ช่องจัดเก็บที่มีสต็อกอยู่</div>
+        <div id="issKpiTodayDocs" class="mono txt-indigo" style="margin-top:10px;font-size:30px;font-weight:700;">0</div>
+        <div class="txt-muted" style="margin-top:4px;font-size:12px;">รายการที่เบิกออกวันนี้</div>
       </div>
 
       <div class="panel kpi-card">
         <div class="mono txt-muted" style="display:flex;justify-content:space-between;font-size:11px;text-transform:uppercase;">
           <span>Last Sync</span>
-          <span class="txt-amber">●</span>
+          <span class="txt-emerald">●</span>
         </div>
-        <div id="kpiLastSync" class="mono txt-amber" style="margin-top:12px;font-size:22px;font-weight:700;">--:--:--</div>
-        <div id="kpiStatusText" class="txt-muted" style="margin-top:4px;font-size:12px;">พร้อมซิงก์ข้อมูล</div>
+        <div id="issKpiLastSync" class="mono txt-emerald" style="margin-top:12px;font-size:22px;font-weight:700;">--:--:--</div>
+        <div id="issKpiStatusText" class="txt-muted" style="margin-top:4px;font-size:12px;">พร้อมซิงก์ข้อมูล</div>
       </div>
     </section>
 
-    <!-- Search, Column Filter & Export Bar -->
+    <!-- Search & Date Filter Bar -->
     <section class="panel" style="padding:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;">
-      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 520px;">
-        <select id="searchColumn" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:600;">
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;flex:1 1 540px;">
+        <select id="issueSearchColumn" class="select-control mono txt-cyan" style="font-size:12.5px;font-weight:600;">
           <option value="all">ALL COLUMNS</option>
-          <option value="Part_Name">CARTON PART NO.</option>
-          <option value="Type_cartons">TYPE_CARTONS</option>
-          <option value="LotNo">LOT</option>
-          <option value="Location_Name">LOCATION</option>
+          <option value="IssueNo">IssueNo</option>
+          <option value="CreatedBy">ผู้สร้าง</option>
+          <option value="Part_Name">Part_Name</option>
+          <option value="LotNo">LotNo</option>
         </select>
 
-        <div style="position:relative;flex:1 1 220px;">
-          <input id="searchInput" type="text" class="input-control" style="width:100%;padding-right:34px;"
-            placeholder="พิมพ์คำค้นหาตามคอลัมน์ที่เลือก..." />
-          <button id="clearSearchBtn" type="button" onclick="clearFilters()" title="ล้างตัวกรอง"
+        <div style="position:relative;flex:1 1 200px;">
+          <input id="issueSearchInput" type="text" class="input-control" style="width:100%;padding-right:34px;"
+            placeholder="ค้นหาเลขที่เบิกใช้, ผู้สร้าง, Part_Name หรือ LotNo..." />
+          <button id="clearIssueSearchBtn" type="button" onclick="clearIssueFilters()" title="ล้างตัวกรอง"
             class="hidden btn btn-ghost" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:3px 8px;font-size:11px;">✕</button>
         </div>
 
-        <select id="statusFilter" class="select-control" style="font-size:12.5px;">
-          <option value="all">สถานะ: ทั้งหมด</option>
-          <option value="available">พร้อมใช้ (Qty > 0)</option>
-          <option value="empty">หมด (Qty = 0)</option>
-        </select>
+        <input id="issueDateFilter" type="date" class="input-control mono" style="font-size:12.5px;" title="กรองตามวันที่เบิกออก" />
       </div>
 
       <div style="display:flex;align-items:center;gap:12px;">
         <div class="mono txt-muted" style="font-size:12px;">
-          SHOWING: <span id="showingCount" class="txt-cyan" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);font-weight:700;">0</span>
+          SHOWING: <span id="issueShowingCount" class="txt-cyan" style="padding:3px 9px;border-radius:8px;background:var(--bg-subtle);font-weight:700;">0</span>
         </div>
-        <button type="button" onclick="exportFilteredToExcel()" class="btn btn-emerald-soft">
-          <span>⬇</span>
-          <span>Export Excel</span>
-        </button>
       </div>
     </section>
 
     <!-- Data Table -->
     <section class="panel" style="overflow:hidden;">
-      <div id="loadingBanner" class="hidden mono txt-cyan" style="padding:10px 18px;background:var(--c-cyan-soft-bg);border-bottom:1px solid var(--c-cyan-soft-border);font-size:12px;">
-        ⟳ SYNCING DATA FROM SUPABASE...
+      <div id="issueLoadingBanner" class="hidden mono txt-cyan" style="padding:10px 18px;background:var(--c-cyan-soft-bg);border-bottom:1px solid var(--c-cyan-soft-border);font-size:12px;">
+        ⟳ SYNCING STOCK ISSUE FROM SUPABASE...
       </div>
 
       <div style="overflow-x:auto;">
         <table class="data-table">
           <thead>
             <tr>
-              <th>CARTON PART NO.</th>
-              <th>TYPE_CARTONS</th>
-              <th>LOT</th>
-              <th>LOCATION</th>
-              <th style="text-align:right;">QTYBALANCE</th>
-              <th style="text-align:center;">STATUS</th>
+              <th>เลขที่เบิกใช้ ISSUENO</th>
+              <th>ISSUE DATE</th>
+              <th>ผู้สร้าง</th>
+              <th style="text-align:right;">QTY</th>
             </tr>
           </thead>
-          <tbody id="stockTableBody">
+          <tbody id="issueTableBody">
             <tr>
-              <td colspan="6" class="txt-muted" style="padding:44px 16px;text-align:center;">กำลังโหลดข้อมูล...</td>
+              <td colspan="4" class="txt-muted" style="padding:44px 16px;text-align:center;">กำลังโหลดข้อมูลเบิกออก...</td>
             </tr>
           </tbody>
         </table>
@@ -173,26 +160,35 @@
   </main>
 
   <!-- Detail Drawer -->
-  <div id="detailDrawer" class="hidden" style="position:fixed;inset:0;z-index:50;">
-    <div onclick="closeDrawer()" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);"></div>
-    <aside class="modal-card" style="position:fixed;right:0;top:0;height:100%;width:100%;max-width:440px;border-radius:0;border-left:1px solid var(--border-subtle);padding:22px;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;">
+  <div id="issueDrawer" class="hidden" style="position:fixed;inset:0;z-index:50;">
+    <div onclick="closeIssueDrawer()" style="position:fixed;inset:0;background:rgba(15,23,42,0.5);"></div>
+    <aside class="modal-card" style="position:fixed;right:0;top:0;height:100%;width:100%;max-width:460px;border-radius:0;border-left:1px solid var(--border-subtle);padding:22px;overflow-y:auto;display:flex;flex-direction:column;justify-content:space-between;">
       <div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px;border-bottom:1px solid var(--border-subtle);">
           <div>
-            <div class="mono txt-cyan" style="font-size:11px;font-weight:700;text-transform:uppercase;">Box Inspector</div>
-            <h2 id="drawerTitle" class="mono txt-primary" style="margin:4px 0 0;font-size:17px;font-weight:700;">-</h2>
+            <div class="mono txt-amber" style="font-size:11px;font-weight:700;text-transform:uppercase;">Issue Inspector</div>
+            <h2 id="issueDrawerTitle" class="mono txt-primary" style="margin:4px 0 0;font-size:17px;font-weight:700;">-</h2>
           </div>
-          <button type="button" onclick="closeDrawer()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
+          <button type="button" onclick="closeIssueDrawer()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
         </div>
-        <dl id="drawerContent" style="margin:18px 0 0;display:flex;flex-direction:column;gap:10px;"></dl>
+        <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
+        <button id="exportIssueXlsxBtn" type="button" onclick="exportSelectedIssueToXLSX()" class="btn btn-emerald-soft" style="width:100%;">
+          <span>⬇</span>
+          <span>Export Excel</span>
+        </button>
       </div>
-      <button type="button" onclick="closeDrawer()" class="btn btn-ghost" style="margin-top:20px;width:100%;">ปิดหน้าต่าง</button>
+        <dl id="issueDrawerContent" style="margin:18px 0 0;display:flex;flex-direction:column;gap:10px;"></dl>
+      </div>
+
+      <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
+        <button type="button" onclick="closeIssueDrawer()" class="btn btn-ghost" style="width:100%;">ปิดหน้าต่าง</button>
+      </div>
     </aside>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/dashboard.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/issue.js"></script>
 </body>
 </html>

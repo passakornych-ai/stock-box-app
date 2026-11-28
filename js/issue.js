@@ -1,5 +1,3 @@
-
-javascript
 let allIssueRows = [];
 let currentFilteredIssueRows = [];
 let issueDetailRows = [];
