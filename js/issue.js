@@ -207,7 +207,7 @@ async function loadStockIssue() {
     const lastSyncEl = document.getElementById('issKpiLastSync');
     const statusTextEl = document.getElementById('issKpiStatusText');
     if (lastSyncEl) lastSyncEl.textContent = now.toLocaleTimeString('th-TH', { hour12: false });
-    if (statusTextEl) statusTextEl.textContent = 'เชื่อมต่อ Supabase สำเร็จ';
+    if (statusTextEl) statusTextEl.textContent = 'เชื่อมต่อ ฐานข้อมูล สำเร็จ';
 
     if (badge) {
       badge.className = 'mono status-pill-active';
@@ -368,7 +368,7 @@ function openIssueDrawerByIndex(index) {
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
           <div class="mono txt-amber" style="font-size:11px;font-weight:700;margin-bottom:6px;">
-            ITEM #${dIdx + 1}
+            CASE ID ${dIdx + 1}
           </div>
           <div>${renderFilteredColumnsList(d, EXCLUDED_ISSUE_DETAIL_KEYS)}</div>
         </div>
