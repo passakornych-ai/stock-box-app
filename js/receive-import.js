@@ -203,11 +203,22 @@ function handleReceiveFileChange(event) {
 }
 
 function clearImportedReceive() {
+  const hadItems = parsedReceiveItems.length;
   parsedReceiveItems = [];
   const fileInput = document.getElementById('receiveFileInput');
   if (fileInput) fileInput.value = '';
   document.getElementById('selectedFileName').textContent = 'ยังไม่ได้เลือกไฟล์';
   renderImportPreview();
+
+  if (hadItems > 0) {
+    window.ActivityLogger?.log({
+      page: 'Receive Import',
+      action: 'CLEAR',
+      actor: (document.getElementById('importCreatedBy')?.value || 'Admin').trim() || 'Admin',
+      summary: `ล้างรายการ Preview ที่นำเข้าค้างไว้จำนวน ${hadItems} แถว`,
+      meta: { clearedRows: hadItems }
+    });
+  }
 }
 
 function downloadReceiveTemplate() {
@@ -293,6 +304,22 @@ async function submitReceiveImport() {
 
     const { error: detErr } = await client.from('stock_receive_detail').insert(detailPayloads);
     if (detErr) throw detErr;
+
+    await window.ActivityLogger?.log({
+      page: 'Receive Import',
+      action: 'IMPORT',
+      actor: createdBy,
+      summary: `นำเข้าใบรับเข้า ${receiveNo} (${receiveId}) จำนวน ${detailPayloads.length} รายการ รวม ${totalQty.toLocaleString()} ชิ้น (Location เริ่มต้น: ${defaultLoc})`,
+      meta: {
+        receiveId,
+        receiveNo,
+        createdAt,
+        createdBy,
+        defaultLoc,
+        itemCount: detailPayloads.length,
+        totalQty
+      }
+    });
 
     showImpToast(`IMPORTED ${detailPayloads.length} ITEMS (${receiveNo})`);
     clearImportedReceive();

@@ -564,6 +564,42 @@ async function saveStockBoxRecord(event) {
 
     closeStockEditModal();
     await loadStockManage();
+    if (isEdit && targetRow) {
+      const pk = resolvePrimaryKeyInfo(targetRow);
+      if (!pk) {
+        throw new Error('ไม่พบ Primary Key (StockBoxID / Row ID) สำหรับอัปเดตแถวนี้');
+      }
+      const { error } = await client.from('stock_box').update(payload).eq(pk.column, pk.value);
+      if (error) throw error;
+
+      await window.ActivityLogger?.log({
+        page: 'Stock Manage',
+        action: 'UPDATE',
+        actor: 'Admin',
+        summary: `แก้ไขกล่อง ${partName} (Lot: ${lotNo || '-'}, Location: ${locationName}, Qty: ${qtyBalance})`,
+        meta: { id: pk.value, partName, typeCartons, lotNo, locationName, qtyBalance, remark }
+      });
+
+      showMgrToast(`UPDATED: ${partName}`);
+    } else {
+      const idCol = resolveActualColumnName(sampleRow, ['StockBoxID', 'stock_box_id'], 'StockBoxID');
+      const newId = generateStockBoxId(8);
+      if (!sampleRow || Object.prototype.hasOwnProperty.call(sampleRow, idCol)) {
+        payload[idCol] = newId;
+      }
+      const { error } = await client.from('stock_box').insert([payload]);
+      if (error) throw error;
+
+      await window.ActivityLogger?.log({
+        page: 'Stock Manage',
+        action: 'CREATE',
+        actor: 'Admin',
+        summary: `เพิ่มกล่องใหม่ ${partName} (Lot: ${lotNo || '-'}, Location: ${locationName}, Qty: ${qtyBalance})`,
+        meta: { id: newId, partName, typeCartons, lotNo, locationName, qtyBalance, remark }
+      });
+
+      showMgrToast(`ADDED: ${partName}`);
+    }
   } catch (err) {
     console.error('Save Stock Box Error:', err);
     showMgrToast(`ERROR: ${err.message || 'บันทึกไม่สำเร็จ'}`, true);
@@ -573,6 +609,7 @@ async function saveStockBoxRecord(event) {
 }
 
 async function deleteSingleStockRow(filteredIndex) {
+  
   const item = currentFilteredMgrRows[filteredIndex];
   if (!item) return;
 
@@ -593,6 +630,13 @@ async function deleteSingleStockRow(filteredIndex) {
     const client = getMgrClient();
     const { error } = await client.from('stock_box').delete().eq(pk.column, pk.value);
     if (error) throw error;
+    await window.ActivityLogger?.log({
+      page: 'Stock Manage',
+      action: 'DELETE',
+      actor: 'Admin',
+      summary: `ลบกล่อง ${partName} (Lot: ${lotNo || '-'}, Location: ${locationName}, Qty: ${qtyBalance})`,
+      meta: { id: pk.value, partName, typeCartons, lotNo, locationName, qtyBalance, remark }
+    });
     showMgrToast(`DELETED: ${partName}`);
     await loadStockManage();
   } catch (err) {
@@ -602,6 +646,27 @@ async function deleteSingleStockRow(filteredIndex) {
 }
 
 async function deleteSelectedStockRows() {
+  for (const col of pkColumns) {
+      const { error } = await client.from('stock_box').delete().in(col, groupedByPkCol[col]);
+      if (error) throw error;
+    }
+
+    const previewNames = targets
+      .slice(0, 5)
+      .map((r) => pickMgrField(r, ['Part_Name', 'part_name'], '-'))
+      .join(', ');
+    const extraCount = targets.length > 5 ? ` และอีก ${targets.length - 5} รายการ` : '';
+
+    await window.ActivityLogger?.log({
+      page: 'Stock Manage',
+      action: 'DELETE',
+      actor: 'Admin',
+      summary: `ลบข้อมูลแบบหลายรายการ ${targets.length} แถว (${previewNames}${extraCount}) ออกจาก stock_box`,
+      meta: { count: targets.length, items: previewNames }
+    });
+
+    showMgrToast(`DELETED ${targets.length} ROWS`);
+    await loadStockManage();
   if (selectedRowKeys.size === 0) return;
 
   const targets = currentFilteredMgrRows.filter((item, idx) =>
