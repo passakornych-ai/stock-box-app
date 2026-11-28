@@ -46,11 +46,14 @@
           <span>📥</span>
           <span>เพิ่มเข้าสินค้า</span>
         </a>
-
         <button type="button" onclick="openPinActionModal(null, () => openStockEditModal(null), 'กรอกรหัสเพื่อเพิ่มรายการใหม่')" class="btn btn-emerald-soft">
           <span>＋</span>
           <span>เพิ่มรายการใหม่</span>
         </button>
+        <a href="../activity-log/" onclick="openPinActionModal(event, () => { window.location.href = '../activity-log/'; }, 'กรอกรหัสเพื่อเข้าดูประวัติ')" class="btn btn-ghost">
+          <span>🕒</span>
+          <span>Activity Log</span>
+        </a>
         <button id="refreshBtn" type="button" onclick="loadStockManage()" class="btn btn-cyan">
           <span>↻</span>
           <span>รีเฟรช</span>
