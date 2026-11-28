@@ -4,6 +4,7 @@ let issueDetailRows = [];
 let selectedIssueItem = null;
 let selectedIssueDetails = [];
 let issueSortState = { key: null, dir: 'desc' };
+let isEditingIssue = false;
 
 const EXCLUDED_ISSUE_HEADER_KEYS = new Set([
   'rowid', 'row_id', 'row id',
@@ -45,13 +46,56 @@ const escapeIssueHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-function renderFilteredColumnsList(obj, excludedSet) {
+// เว้นตัว T ออกจากสตริงวันที่/เวลา เช่น 2026-11-27T00:00:00 -> 2026-11-27 00:00:00
+function formatDateWithoutT(val) {
+  if (val === null || val === undefined || String(val).trim() === '') return '-';
+  const str = String(val).trim();
+  return str.replace(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)(?:Z|[+-]\d{2}:?\d{2})?$/i, '$1 $2');
+}
+
+function formatDisplayValue(key, val) {
+  if (val === null || val === undefined || String(val).trim() === '') return '-';
+  const k = normalizeKey(key);
+  const str = String(val);
+  if (k.includes('date') || k.endsWith('at') || /^\d{4}-\d{2}-\d{2}T/.test(str)) {
+    return formatDateWithoutT(str);
+  }
+  return str;
+}
+
+function renderFilteredColumnsList(obj, excludedSet, options = {}) {
+  const { editable = false, scope = 'header', detailIndex = -1 } = options;
   const entries = Object.entries(obj || {}).filter(
     ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeKey(k))
   );
+
   return entries
     .map(([k, v]) => {
-      const displayVal = v === null || v === undefined || String(v).trim() === '' ? '-' : String(v);
+      const displayVal = formatDisplayValue(k, v);
+      const rawVal = v === null || v === undefined ? '' : String(v);
+
+      if (editable) {
+        const isNumber = normalizeKey(k) === 'qty' || normalizeKey(k) === 'qtybalance';
+        const inputType = isNumber ? 'number' : 'text';
+        const dataAttrs =
+          scope === 'detail'
+            ? `data-edit-scope="detail" data-detail-index="${detailIndex}" data-field-key="${escapeIssueHtml(k)}"`
+            : `data-edit-scope="header" data-field-key="${escapeIssueHtml(k)}"`;
+
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border-row);">
+            <span class="mono txt-muted" style="font-size:11.5px;flex-shrink:0;">${escapeIssueHtml(k)}</span>
+            <input
+              type="${inputType}"
+              ${dataAttrs}
+              value="${escapeIssueHtml(rawVal)}"
+              class="input-control mono"
+              style="max-width:230px;width:100%;padding:5px 9px;font-size:12px;text-align:right;"
+            />
+          </div>
+        `;
+      }
+
       return `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border-row);">
           <span class="mono txt-muted" style="font-size:11.5px;flex-shrink:0;">${escapeIssueHtml(k)}</span>
@@ -62,20 +106,22 @@ function renderFilteredColumnsList(obj, excludedSet) {
     .join('');
 }
 
-function showIssueToast(message) {
+function showIssueToast(message, isError = false) {
   let toast = document.getElementById('toastBox');
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'toastBox';
     toast.className = 'mono';
     toast.style.cssText =
-      'position:fixed;bottom:20px;right:20px;z-index:60;padding:10px 16px;border-radius:11px;background:var(--bg-surface);border:1px solid var(--c-cyan);color:var(--c-cyan);font-size:12px;font-weight:600;box-shadow:0 12px 28px rgba(0,0,0,0.22);';
+      'position:fixed;bottom:20px;right:20px;z-index:60;padding:10px 16px;border-radius:11px;background:var(--bg-surface);font-size:12px;font-weight:600;box-shadow:0 12px 28px rgba(0,0,0,0.22);';
     document.body.appendChild(toast);
   }
+  toast.style.border = isError ? '1px solid #e11d48' : '1px solid var(--c-cyan)';
+  toast.style.color = isError ? '#e11d48' : 'var(--c-cyan)';
   toast.textContent = message;
   toast.classList.remove('hidden');
   clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 2200);
+  window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 2400);
 }
 
 function copyIssueText(event, text) {
@@ -207,7 +253,7 @@ async function loadStockIssue() {
     const lastSyncEl = document.getElementById('issKpiLastSync');
     const statusTextEl = document.getElementById('issKpiStatusText');
     if (lastSyncEl) lastSyncEl.textContent = now.toLocaleTimeString('th-TH', { hour12: false });
-    if (statusTextEl) statusTextEl.textContent = 'เชื่อมต่อ ฐานข้อมูล สำเร็จ';
+    if (statusTextEl) statusTextEl.textContent = 'เชื่อมต่อ Supabase สำเร็จ';
 
     if (badge) {
       badge.className = 'mono status-pill-active';
@@ -317,7 +363,9 @@ function renderIssueTable(rows) {
   tbody.innerHTML = '';
   currentFilteredIssueRows.forEach((item, idx) => {
     const issueNo = pickIssueField(item, ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Issue_ID', 'Row ID']);
-    const issDate = pickIssueField(item, ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at']);
+    const issDate = formatDateWithoutT(
+      pickIssueField(item, ['IssueDate', 'issue_date', 'Issue_Date', 'Date', 'CreatedAt', 'created_at'])
+    );
     const createdBy = pickIssueField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
     const qty = Number(item.__computedQty) || 0;
 
@@ -346,20 +394,32 @@ function renderIssueTable(rows) {
   });
 }
 
-function openIssueDrawerByIndex(index) {
-  const item = currentFilteredIssueRows[index];
-  if (!item) return;
+function ensureIssueDrawerActionBar() {
+  const exportBtn = document.getElementById('exportIssueXlsxBtn');
+  if (!exportBtn) return null;
 
-  selectedIssueItem = item;
-  const issId = String(pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '-'));
-  const displayTitle = String(pickIssueField(item, ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Row ID'], '-'));
+  let bar = document.getElementById('issueDrawerEditBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'issueDrawerEditBar';
+    bar.style.cssText = 'display:flex;gap:8px;margin-top:6px;';
+    exportBtn.parentElement.appendChild(bar);
+  }
+  return bar;
+}
+
+function renderIssueDrawerBody() {
+  if (!selectedIssueItem) return;
+
+  const displayTitle = String(
+    pickIssueField(selectedIssueItem, ['IssueNo', 'issue_no', 'IssueID', 'issue_id', 'Row ID'], '-')
+  );
   document.getElementById('issueDrawerTitle').textContent = displayTitle;
 
-  const fieldsHtml = renderFilteredColumnsList(item, EXCLUDED_ISSUE_HEADER_KEYS);
-
-  selectedIssueDetails = issueDetailRows.filter(
-    (d) => String(pickIssueField(d, ['IssueID', 'issue_id', 'Issue_ID'], '')).trim() === issId.trim()
-  );
+  const fieldsHtml = renderFilteredColumnsList(selectedIssueItem, EXCLUDED_ISSUE_HEADER_KEYS, {
+    editable: isEditingIssue,
+    scope: 'header'
+  });
 
   let detailsSectionHtml = '';
   if (selectedIssueDetails.length > 0) {
@@ -370,7 +430,11 @@ function openIssueDrawerByIndex(index) {
           <div class="mono txt-amber" style="font-size:11px;font-weight:700;margin-bottom:6px;">
             CASE ID ${dIdx + 1}
           </div>
-          <div>${renderFilteredColumnsList(d, EXCLUDED_ISSUE_DETAIL_KEYS)}</div>
+          <div>${renderFilteredColumnsList(d, EXCLUDED_ISSUE_DETAIL_KEYS, {
+            editable: isEditingIssue,
+            scope: 'detail',
+            detailIndex: dIdx
+          })}</div>
         </div>
       `
       )
@@ -379,24 +443,141 @@ function openIssueDrawerByIndex(index) {
     detailsSectionHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
         <div class="mono txt-amber" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-          Detail CASE (${selectedIssueDetails.length})
+          Detail Case (${selectedIssueDetails.length})
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">${detailCards}</div>
       </div>
     `;
   }
 
+  const bar = ensureIssueDrawerActionBar();
+  if (bar) {
+    if (isEditingIssue) {
+      bar.innerHTML = `
+        <button type="button" onclick="saveIssueEdits()" class="btn btn-cyan" style="flex:1;">
+          <span>💾</span>
+          <span>บันทึกการแก้ไข</span>
+        </button>
+        <button type="button" onclick="cancelIssueEdit()" class="btn btn-ghost">
+          <span>ยกเลิก</span>
+        </button>
+      `;
+    } else {
+      bar.innerHTML = `
+        <button type="button" onclick="startIssueEdit()" class="btn btn-indigo-soft" style="width:100%;">
+          <span>✏️</span>
+          <span>แก้ไขข้อมูล</span>
+        </button>
+      `;
+    }
+  }
+
   const exportBtn = document.getElementById('exportIssueXlsxBtn');
   if (exportBtn) {
-    exportBtn.disabled = selectedIssueDetails.length === 0;
-    exportBtn.style.opacity = selectedIssueDetails.length === 0 ? '0.5' : '1';
+    exportBtn.disabled = isEditingIssue || selectedIssueDetails.length === 0;
+    exportBtn.style.opacity = exportBtn.disabled ? '0.5' : '1';
   }
 
   document.getElementById('issueDrawerContent').innerHTML = fieldsHtml + detailsSectionHtml;
+}
+
+function openIssueDrawerByIndex(index) {
+  const item = currentFilteredIssueRows[index];
+  if (!item) return;
+
+  isEditingIssue = false;
+  selectedIssueItem = item;
+  const issId = String(pickIssueField(item, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '-'));
+
+  selectedIssueDetails = issueDetailRows.filter(
+    (d) => String(pickIssueField(d, ['IssueID', 'issue_id', 'Issue_ID'], '')).trim() === issId.trim()
+  );
+
+  renderIssueDrawerBody();
   document.getElementById('issueDrawer').classList.remove('hidden');
 }
 
+function startIssueEdit() {
+  isEditingIssue = true;
+  renderIssueDrawerBody();
+}
+
+function cancelIssueEdit() {
+  isEditingIssue = false;
+  renderIssueDrawerBody();
+}
+
+async function saveIssueEdits() {
+  if (!selectedIssueItem) return;
+
+  const container = document.getElementById('issueDrawerContent');
+  if (!container) return;
+
+  const headerUpdates = {};
+  const detailUpdatesMap = new Map();
+
+  container.querySelectorAll('[data-edit-scope]').forEach((input) => {
+    const scope = input.dataset.editScope;
+    const key = input.dataset.fieldKey;
+    if (!key) return;
+
+    const val = input.type === 'number' ? (input.value === '' ? 0 : Number(input.value)) : input.value;
+
+    if (scope === 'header') {
+      headerUpdates[key] = val;
+    } else if (scope === 'detail') {
+      const idx = Number(input.dataset.detailIndex);
+      if (!detailUpdatesMap.has(idx)) detailUpdatesMap.set(idx, {});
+      detailUpdatesMap.get(idx)[key] = val;
+    }
+  });
+
+  Object.assign(selectedIssueItem, headerUpdates);
+  detailUpdatesMap.forEach((patch, idx) => {
+    if (selectedIssueDetails[idx]) {
+      Object.assign(selectedIssueDetails[idx], patch);
+    }
+  });
+
+  // คำนวณยอดรวม Qty ใหม่จาก Detail ที่ถูกแก้ไข
+  const issId = String(pickIssueField(selectedIssueItem, ['IssueID', 'issue_id', 'Issue_ID', 'Row ID'], '')).trim();
+  const updatedSumQty = selectedIssueDetails.reduce(
+    (acc, d) => acc + (Number(pickIssueField(d, ['Qty', 'qty', 'IssueQty', 'issue_qty', 'QtyBalance'], 0)) || 0),
+    0
+  );
+  if (selectedIssueDetails.length > 0) {
+    selectedIssueItem.__computedQty = updatedSumQty;
+  }
+
+  // จุดพร้อมเชื่อมต่อบันทึกขึ้น Supabase ในอนาคต (เปิดใช้เมื่อตั้งค่าคอลัมน์ Primary Key ตรงกับตาราง)
+  const client = getIssueClient();
+  if (client && issId && issId !== '-') {
+    try {
+      // ตัวอย่าง:
+      // await client.from('stock_issue').update(headerUpdates).eq('IssueID', issId);
+      // for (const [idx, patch] of detailUpdatesMap.entries()) {
+      //   const det = selectedIssueDetails[idx];
+      //   const detId = pickIssueField(det, ['IssueDetailID', 'issue_detail_id'], '');
+      //   if (detId && detId !== '-') {
+      //     await client.from('stock_issue_detail').update(patch).eq('IssueDetailID', detId);
+      //   }
+      // }
+    } catch (err) {
+      console.error('Save Issue Edit Error:', err);
+      showIssueToast(`บันทึกลงฐานข้อมูลไม่สำเร็จ: ${err.message}`, true);
+      return;
+    }
+  }
+
+  isEditingIssue = false;
+  updateIssueKPIs(allIssueRows);
+  renderIssueTable(allIssueRows);
+  renderIssueDrawerBody();
+  showIssueToast('อัปเดตข้อมูลเรียบร้อยแล้ว');
+}
+
 function closeIssueDrawer() {
+  isEditingIssue = false;
   document.getElementById('issueDrawer')?.classList.add('hidden');
 }
 
@@ -433,13 +614,13 @@ function exportSelectedIssueToXLSX() {
   const excelRows = selectedIssueDetails.map((d) => ({
     order: cleanVal(pickIssueField(d, ['Order_Number', 'order_number', 'Order', 'order'], '-')),
     "s'tag": cleanVal(pickIssueField(d, ['Service_Tag', 'service_tag', "s'tag", 's_tag'], '-')),
-    box: cleanVal(pickIssueField(d, ['Carton Part No.','Part_Name', 'part_name', 'box', 'Box', 'Product'], '-')),
+    box: cleanVal(pickIssueField(d, ['Part_Name', 'part_name', 'box', 'Box', 'Product'], '-')),
     location: cleanVal(pickIssueField(d, ['Location_Name', 'location_name', 'location', 'Location'], '-')),
     Remarks: cleanVal(pickIssueField(d, ['Remark', 'remark', 'Remarks', 'remarks'], '-')),
-    เป่าสติ๊กเกอร์: cleanVal(pickIssueField(d, ['เป่าสติ๊กเกอร์','Blow', 'blow',], '-')),
-    ติดสติ๊กเกอร์: cleanVal(pickIssueField(d, ['ติดสติ๊กเกอร์','Stick', 'stick',], '-')),
-    เปลี่ยนกล่อง: cleanVal(pickIssueField(d, ['เปลี่ยนกล่อง','Change', 'change',], '-')),
-    หยิบกล่อง: cleanVal(pickIssueField(d, ['หยิบกล่อง','Pull', 'pull',], '-'))
+    เป่าสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Blow', 'blow', 'เป่าสติ๊กเกอร์'], '-')),
+    ติดสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Stick', 'stick', 'ติดสติ๊กเกอร์'], '-')),
+    เปลี่ยนกล่อง: cleanVal(pickIssueField(d, ['Change', 'change', 'เปลี่ยนกล่อง'], '-')),
+    หยิบกล่อง: cleanVal(pickIssueField(d, ['Pull', 'pull', 'หยิบกล่อง'], '-'))
   }));
 
   const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
