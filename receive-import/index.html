@@ -42,7 +42,7 @@
           <span>📥</span>
           <span>รับเข้าสินค้า</span>
         </a>
-        <a href="../stock-manage/" onclick="openImportPinModal(event)" class="btn btn-purple-soft">
+        <a href="./stock-manage/" onclick="openImportPinModal(event)" class="btn btn-purple-soft">
           <span>🛠️</span>
           <span>จัดการสต็อก</span>
         </a>
@@ -142,35 +142,35 @@
     </section>
 
     <!-- PIN Modal (Stock Manage) -->
-<div id="pinGuardModal" class="hidden" style="position:fixed;inset:0;z-index:80;">
-  <div onclick="closePinGuardModal()" style="position:fixed;inset:0;background:rgba(15,23,42,0.58);backdrop-filter:blur(3px);"></div>
-  <div style="position:relative;z-index:10;max-width:360px;margin:110px auto 24px;padding:0 16px;">
-    <div class="modal-card" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
-        <div>
-          <div class="mono txt-cyan" style="font-size:11px;font-weight:700;">ACCESS LOCK</div>
-          <h3 id="pinGuardTitle" class="txt-primary" style="margin:3px 0 0;font-size:16px;font-weight:700;">กรอกรหัส PIN</h3>
-        </div>
-        <button type="button" onclick="closePinGuardModal()" class="btn btn-ghost" style="padding:5px 10px;">✕</button>
-      </div>
+    <div id="importPinModal" class="hidden" style="position:fixed;inset:0;z-index:70;">
+      <div onclick="closeImportPinModal()" style="position:fixed;inset:0;background:rgba(15,23,42,0.55);"></div>
+      <div style="position:relative;z-index:10;max-width:360px;margin:110px auto 24px;padding:0 16px;">
+        <div class="modal-card" style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div class="mono txt-cyan" style="font-size:11px;font-weight:700;">ACCESS LOCK</div>
+              <h3 class="txt-primary" style="margin:3px 0 0;font-size:16px;font-weight:700;">กรอกรหัสเพื่อเข้าเมนูเพิ่มเข้าสินค้า</h3>
+            </div>
+            <button type="button" onclick="closeImportPinModal()" class="btn btn-ghost" style="padding:5px 10px;">✕</button>
+          </div>
 
-      <div>
-        <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">ENTER PIN</label>
-        <input id="pinGuardInput" type="password" inputmode="numeric" class="input-control mono"
-          style="width:100%;font-size:16px;letter-spacing:4px;" placeholder="••••"
-          onkeydown="if(event.key==='Enter') verifyPinGuard();" />
-        <div id="pinGuardError" class="hidden" style="margin-top:6px;font-size:12px;color:#e11d48;">
-          รหัส PIN ไม่ถูกต้อง
-        </div>
-      </div>
+          <div>
+            <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">ENTER PIN</label>
+            <input id="importPinInput" type="password" inputmode="numeric" class="input-control mono"
+              style="width:100%;font-size:16px;letter-spacing:4px;" placeholder="••••"
+              onkeydown="if(event.key==='Enter') verifyImportPin();" />
+            <div id="importPinError" class="hidden" style="margin-top:6px;font-size:12px;color:#e11d48;">
+              รหัสไม่ถูกต้อง
+            </div>
+          </div>
 
-      <div style="display:flex;justify-content:flex-end;gap:8px;">
-        <button type="button" onclick="closePinGuardModal()" class="btn btn-ghost">ยกเลิก</button>
-        <button type="button" onclick="verifyPinGuard()" class="btn btn-cyan">ยืนยัน</button>
+          <div style="display:flex;justify-content:flex-end;gap:8px;">
+            <button type="button" onclick="closeImportPinModal()" class="btn btn-ghost">ยกเลิก</button>
+            <button type="button" onclick="verifyImportPin()" class="btn btn-cyan">ยืนยัน</button>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
   </main>
 
