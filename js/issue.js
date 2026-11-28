@@ -379,7 +379,7 @@ function openIssueDrawerByIndex(index) {
     detailsSectionHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
         <div class="mono txt-amber" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-          Detail Items (${selectedIssueDetails.length})
+          Detail CASE (${selectedIssueDetails.length})
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">${detailCards}</div>
       </div>
@@ -433,13 +433,13 @@ function exportSelectedIssueToXLSX() {
   const excelRows = selectedIssueDetails.map((d) => ({
     order: cleanVal(pickIssueField(d, ['Order_Number', 'order_number', 'Order', 'order'], '-')),
     "s'tag": cleanVal(pickIssueField(d, ['Service_Tag', 'service_tag', "s'tag", 's_tag'], '-')),
-    box: cleanVal(pickIssueField(d, ['Part_Name', 'part_name', 'box', 'Box', 'Product'], '-')),
+    box: cleanVal(pickIssueField(d, ['Carton Part No.','Part_Name', 'part_name', 'box', 'Box', 'Product'], '-')),
     location: cleanVal(pickIssueField(d, ['Location_Name', 'location_name', 'location', 'Location'], '-')),
     Remarks: cleanVal(pickIssueField(d, ['Remark', 'remark', 'Remarks', 'remarks'], '-')),
-    เป่าสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Blow', 'blow', 'เป่าสติ๊กเกอร์'], '-')),
-    ติดสติ๊กเกอร์: cleanVal(pickIssueField(d, ['Stick', 'stick', 'ติดสติ๊กเกอร์'], '-')),
-    เปลี่ยนกล่อง: cleanVal(pickIssueField(d, ['Change', 'change', 'เปลี่ยนกล่อง'], '-')),
-    หยิบกล่อง: cleanVal(pickIssueField(d, ['Pull', 'pull', 'หยิบกล่อง'], '-'))
+    เป่าสติ๊กเกอร์: cleanVal(pickIssueField(d, ['เป่าสติ๊กเกอร์','Blow', 'blow',], '-')),
+    ติดสติ๊กเกอร์: cleanVal(pickIssueField(d, ['ติดสติ๊กเกอร์','Stick', 'stick',], '-')),
+    เปลี่ยนกล่อง: cleanVal(pickIssueField(d, ['เปลี่ยนกล่อง','Change', 'change',], '-')),
+    หยิบกล่อง: cleanVal(pickIssueField(d, ['หยิบกล่อง','Pull', 'pull',], '-'))
   }));
 
   const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
