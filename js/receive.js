@@ -416,7 +416,7 @@ function openReceiveDrawerByIndex(index) {
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
           <div class="mono txt-emerald" style="font-size:11px;font-weight:700;margin-bottom:6px;">
-            ITEM #${dIdx + 1}
+            ITEM ID${dIdx + 1}
           </div>
           <div>${renderFilteredReceiveColumnsList(d, EXCLUDED_RECEIVE_DETAIL_KEYS, RECEIVE_DETAIL_LABELS)}</div>
         </div>

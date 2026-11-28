@@ -415,7 +415,7 @@ function openIssueDrawerByIndex(index) {
         (d, dIdx) => `
         <div style="padding:12px 14px;border-radius:12px;background:var(--bg-control);border:1px solid var(--border-subtle);">
           <div class="mono txt-amber" style="font-size:11px;font-weight:700;margin-bottom:6px;">
-            ITEM #${dIdx + 1}
+            CASE ID${dIdx + 1}
           </div>
           <div>${renderFilteredColumnsList(d, EXCLUDED_ISSUE_DETAIL_KEYS, ISSUE_DETAIL_LABELS)}</div>
         </div>
@@ -426,7 +426,7 @@ function openIssueDrawerByIndex(index) {
     detailsSectionHtml = `
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-subtle);">
         <div class="mono txt-amber" style="font-size:11px;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-          Detail Items (${selectedIssueDetails.length})
+          Detail Cases (${selectedIssueDetails.length})
         </div>
         <div style="display:flex;flex-direction:column;gap:10px;">${detailCards}</div>
       </div>
