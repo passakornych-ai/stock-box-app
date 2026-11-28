@@ -2,9 +2,6 @@ let allStockRows = [];
 let currentFilteredRows = [];
 let sortState = { key: null, dir: 'asc' };
 
-// =====================================================================
-// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงในตารางและ Drawer ได้ง่ายในอนาคต)
-// =====================================================================
 const DASHBOARD_TABLE_LABELS = {
   Part_Name: 'CARTON PART NO.',
   Type_cartons: 'TYPE_CARTONS',
@@ -42,7 +39,6 @@ const normalizeBoxKey = (k) => String(k || '').trim().toLowerCase();
 
 const getBoxInspectorLabel = (key) => BOX_INSPECTOR_LABELS[normalizeBoxKey(key)] || key;
 
-// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
 const formatDashboardDisplayValue = (val) => {
   if (val === null || val === undefined || String(val).trim() === '') return '-';
   const str = String(val).trim();

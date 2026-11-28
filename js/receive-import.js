@@ -1,8 +1,5 @@
 let parsedReceiveItems = [];
 
-// =====================================================================
-// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Preview Table ได้ง่ายในอนาคต)
-// =====================================================================
 const RECEIVE_IMPORT_LABELS = {
   part_name: 'Carton Part No.',
   type_cartons: 'ประเภทกล่อง',
@@ -15,7 +12,6 @@ const normalizeImpKey = (k) => String(k || '').trim().toLowerCase();
 
 const getImportLabel = (key) => RECEIVE_IMPORT_LABELS[normalizeImpKey(key)] || key;
 
-// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
 const formatImportDisplayValue = (val) => {
   if (val === null || val === undefined || String(val).trim() === '') return '-';
   const str = String(val).trim();

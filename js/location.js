@@ -1,16 +1,12 @@
 let matrixCards = [];
 let currentFilter = 'all';
 
-// =====================================================================
-// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Modal รายการสินค้าได้ง่ายในอนาคต)
-// =====================================================================
 const LOCATION_MODAL_LABELS = {
   lotLabel: 'LOT',
   qtyBalanceLabel: 'QTY',
   emptyText: 'EMPTY'
 };
 
-// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
 const formatLocationDisplayValue = (val) => {
   if (val === null || val === undefined || String(val).trim() === '') return '-';
   const str = String(val).trim();

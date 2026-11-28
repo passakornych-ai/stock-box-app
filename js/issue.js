@@ -5,11 +5,6 @@ let selectedIssueItem = null;
 let selectedIssueDetails = [];
 let issueSortState = { key: null, dir: 'desc' };
 
-// =====================================================================
-// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Drawer ได้ง่ายในอนาคต)
-// key = ชื่อคอลัมน์จากฐานข้อมูล (เทียบแบบไม่สนตัวพิมพ์เล็ก-ใหญ่)
-// value = ชื่อที่ต้องการให้แสดงบนหน้าเว็บ
-// =====================================================================
 const ISSUE_HEADER_LABELS = {
   issueno: 'เลขที่ใบเบิก',
   issue_no: 'เลขที่ใบเบิก',
@@ -39,7 +34,6 @@ const ISSUE_DETAIL_LABELS = {
   type_cartons: 'ประเภทกล่อง'
 };
 
-// คอลัมน์ที่ต้องการซ่อนไม่ให้แสดงใน Drawer
 const EXCLUDED_ISSUE_HEADER_KEYS = new Set([
   'rowid', 'row_id', 'row id',
   'issueid', 'issue_id',
@@ -66,7 +60,6 @@ const getLabelForKey = (key, labelMap) => {
   return labelMap[norm] || key;
 };
 
-// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
 const formatIssueDisplayValue = (val) => {
   if (val === null || val === undefined || String(val).trim() === '') return '-';
   const str = String(val).trim();

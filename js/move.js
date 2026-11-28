@@ -5,9 +5,6 @@ let selectedMoveItem = null;
 let selectedMoveDetails = [];
 let moveSortState = { key: null, dir: 'desc' };
 
-// =====================================================================
-// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Drawer ได้ง่ายในอนาคต)
-// =====================================================================
 const MOVE_HEADER_LABELS = {
   moveno: 'เลขที่ใบย้าย',
   move_no: 'เลขที่ใบย้าย',
@@ -51,7 +48,6 @@ const normalizeMoveKey = (k) => String(k || '').trim().toLowerCase();
 
 const getMoveLabel = (key, labelMap) => labelMap[normalizeMoveKey(key)] || key;
 
-// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
 const formatMoveDisplayValue = (val) => {
   if (val === null || val === undefined || String(val).trim() === '') return '-';
   const str = String(val).trim();
