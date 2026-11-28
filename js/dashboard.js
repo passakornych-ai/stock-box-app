@@ -283,7 +283,7 @@ function renderTable(rows) {
       <td class="txt-secondary" style="font-size:13px;">${safeTypeCartons}</td>
       <td class="mono txt-secondary" style="font-size:12.5px;">${safeLotNo}</td>
       <td>
-        <a href="location.html?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()" class="mono loc-pill">
+        <a href="./location/?highlight=${encodeURIComponent(String(loc))}" onclick="event.stopPropagation()" class="mono loc-pill">
           ${safeLoc} ↗
         </a>
       </td>

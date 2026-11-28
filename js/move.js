@@ -426,7 +426,7 @@ function exportSelectedMoveToXLSX() {
   const excelRows = selectedMoveDetails.map((d) => ({
     Part_Name: cleanVal(pickMoveField(d, ['Part_Name', 'part_name', 'Product'], '-')),
     LotNo: cleanVal(pickMoveField(d, ['LotNo', 'lot_no', 'Lot_No'], '-')),
-    Location_Name: cleanVal(pickMoveField(d, ['Location_Name', 'location_name', 'From_Location', 'Location'], '-')),
+    Location_Name: cleanVal(pickField(d, ['Location_Name', 'location_name', 'From_Location', 'Location'], '-')),
     NewLocation_Name: cleanVal(pickMoveField(d, ['NewLocation_Name', 'new_location_name', 'To_Location'], '-')),
     Qty: Number(pickMoveField(d, ['Qty', 'qty', 'MoveQty', 'move_qty'], 0)) || 0,
     Type: cleanVal(pickMoveField(d, ['Type', 'type'], '-')),
