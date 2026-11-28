@@ -45,7 +45,7 @@ function ensureLocationModal() {
         <div id="locModalBody" style="padding:20px;max-height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;"></div>
 
         <div style="padding:14px 20px;border-top:1px solid var(--border-subtle);background:var(--bg-table-head);display:flex;align-items:center;justify-content:space-between;gap:12px;">
-          <a href="index.html" class="mono txt-cyan" style="font-size:12px;font-weight:600;text-decoration:none;">← กลับหน้า Dashboard</a>
+          <a href="../" class="mono txt-cyan" style="font-size:12px;font-weight:600;text-decoration:none;">← กลับหน้า Dashboard</a>
           <button type="button" onclick="closeLocationModal()" class="btn btn-ghost">ปิดหน้าต่าง</button>
         </div>
       </div>
