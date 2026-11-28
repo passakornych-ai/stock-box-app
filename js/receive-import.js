@@ -1,5 +1,31 @@
 let parsedReceiveItems = [];
 
+// =====================================================================
+// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Preview Table ได้ง่ายในอนาคต)
+// =====================================================================
+const RECEIVE_IMPORT_LABELS = {
+  part_name: 'Carton Part No.',
+  type_cartons: 'ประเภทกล่อง',
+  lotno: 'Lot No.',
+  location_name: 'Location',
+  qtybalance: 'จำนวนคงเหลือ'
+};
+
+const normalizeImpKey = (k) => String(k || '').trim().toLowerCase();
+
+const getImportLabel = (key) => RECEIVE_IMPORT_LABELS[normalizeImpKey(key)] || key;
+
+// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
+const formatImportDisplayValue = (val) => {
+  if (val === null || val === undefined || String(val).trim() === '') return '-';
+  const str = String(val).trim();
+  const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+  if (isoMatch) {
+    return `${isoMatch[1]} ${isoMatch[2]}`;
+  }
+  return str;
+};
+
 const getImportClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
 const escapeImpHtml = (str) =>
@@ -62,13 +88,24 @@ function pickRowValue(row, keys, fallback = '') {
   for (const key of keys) {
     const val = lowerMap[String(key).trim().toLowerCase()];
     if (val !== undefined && val !== null && String(val).trim() !== '') {
-      return String(val).trim();
+      return formatImportDisplayValue(val);
     }
   }
   return fallback;
 }
 
+function applyImportPreviewHeaders() {
+  const ths = document.querySelectorAll('#importPreviewBody')?.[0]?.closest('table')?.querySelectorAll('thead th');
+  if (!ths || ths.length < 6) return;
+  ths[1].textContent = getImportLabel('Part_Name');
+  ths[2].textContent = getImportLabel('Type_cartons');
+  ths[3].textContent = getImportLabel('LotNo');
+  ths[4].textContent = getImportLabel('Location_Name');
+  ths[5].textContent = getImportLabel('QtyBalance');
+}
+
 function renderImportPreview() {
+  applyImportPreviewHeaders();
   const tbody = document.getElementById('importPreviewBody');
   const saveBtn = document.getElementById('saveImportReceiveBtn');
   const defaultLoc =
@@ -104,14 +141,14 @@ function renderImportPreview() {
   tbody.innerHTML = parsedReceiveItems
     .map((item, idx) => {
       const qty = Number(item.QtyBalance) || 0;
-      const loc = item.Location_Name || defaultLoc;
+      const loc = formatImportDisplayValue(item.Location_Name || defaultLoc);
       const isValid = Boolean(item.Part_Name) && qty > 0;
       return `
         <tr style="${isValid ? '' : 'opacity:0.55;'}">
           <td class="mono txt-muted">${idx + 1}</td>
-          <td class="mono txt-primary" style="font-weight:700;">${escapeImpHtml(item.Part_Name || '-')}</td>
-          <td class="txt-secondary">${escapeImpHtml(item.Type_cartons || '-')}</td>
-          <td class="mono txt-secondary">${escapeImpHtml(item.LotNo || '-')}</td>
+          <td class="mono txt-primary" style="font-weight:700;">${escapeImpHtml(formatImportDisplayValue(item.Part_Name))}</td>
+          <td class="txt-secondary">${escapeImpHtml(formatImportDisplayValue(item.Type_cartons))}</td>
+          <td class="mono txt-secondary">${escapeImpHtml(formatImportDisplayValue(item.LotNo))}</td>
           <td class="txt-secondary">${escapeImpHtml(loc)}</td>
           <td class="mono ${qty > 0 ? 'txt-emerald' : 'txt-muted'}" style="text-align:right;font-weight:700;">${qty.toLocaleString()}</td>
         </tr>

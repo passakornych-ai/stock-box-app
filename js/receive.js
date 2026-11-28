@@ -5,6 +5,39 @@ let selectedReceiveItem = null;
 let selectedReceiveDetails = [];
 let sortState = { key: null, dir: 'desc' };
 
+// =====================================================================
+// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Drawer ได้ง่ายในอนาคต)
+// =====================================================================
+const RECEIVE_HEADER_LABELS = {
+  receiveno: 'เลขที่ใบรับเข้า',
+  receive_no: 'เลขที่ใบรับเข้า',
+  receivedate: 'วันที่รับเข้า',
+  receive_date: 'วันที่รับเข้า',
+  createdat: 'วันที่สร้าง',
+  created_at: 'วันที่สร้าง',
+  createdby: 'ผู้สร้าง',
+  created_by: 'ผู้สร้าง',
+  qty: 'จำนวนรวม',
+  totalqty: 'จำนวนรวม',
+  total_qty: 'จำนวนรวม'
+};
+
+const RECEIVE_DETAIL_LABELS = {
+  part_name: 'Carton Part No.',
+  lotno: 'Lot No.',
+  lot_no: 'Lot No.',
+  location_name: 'Location',
+  qty: 'จำนวน',
+  qtybalance: 'จำนวนคงเหลือ',
+  qty_balance: 'จำนวนคงเหลือ',
+  type: 'ประเภท',
+  type_cartons: 'ประเภทกล่อง',
+  createdat: 'วันที่สร้าง',
+  created_at: 'วันที่สร้าง',
+  remark: 'หมายเหตุ',
+  remarks: 'หมายเหตุ'
+};
+
 const EXCLUDED_RECEIVE_HEADER_KEYS = new Set([
   'rowid', 'row_id', 'row id',
   'receiveid', 'receive_id',
@@ -29,6 +62,19 @@ const EXCLUDED_RECEIVE_DETAIL_KEYS = new Set([
 
 const normalizeReceiveKey = (k) => String(k || '').trim().toLowerCase();
 
+const getReceiveLabel = (key, labelMap) => labelMap[normalizeReceiveKey(key)] || key;
+
+// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
+const formatReceiveDisplayValue = (val) => {
+  if (val === null || val === undefined || String(val).trim() === '') return '-';
+  const str = String(val).trim();
+  const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+  if (isoMatch) {
+    return `${isoMatch[1]} ${isoMatch[2]}`;
+  }
+  return str;
+};
+
 const getClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
 const pickField = (obj, keys, fallback = '-') => {
@@ -48,16 +94,17 @@ const escapeHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-function renderFilteredReceiveColumnsList(obj, excludedSet) {
+function renderFilteredReceiveColumnsList(obj, excludedSet, labelMap = {}) {
   const entries = Object.entries(obj || {}).filter(
     ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeReceiveKey(k))
   );
   return entries
     .map(([k, v]) => {
-      const displayVal = v === null || v === undefined || String(v).trim() === '' ? '-' : String(v);
+      const displayLabel = getReceiveLabel(k, labelMap);
+      const displayVal = formatReceiveDisplayValue(v);
       return `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border-row);">
-          <span class="mono txt-muted" style="font-size:11.5px;flex-shrink:0;">${escapeHtml(k)}</span>
+          <span class="mono txt-muted" style="font-size:11.5px;flex-shrink:0;">${escapeHtml(displayLabel)}</span>
           <span class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;">${escapeHtml(displayVal)}</span>
         </div>
       `;
@@ -320,7 +367,9 @@ function renderReceiveTable(rows) {
   tbody.innerHTML = '';
   currentFilteredRows.forEach((item, idx) => {
     const receiveNo = pickField(item, ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Receive_ID', 'Row ID']);
-    const recDate = pickField(item, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at']);
+    const recDate = formatReceiveDisplayValue(
+      pickField(item, ['ReceiveDate', 'receive_date', 'Receive_Date', 'Date', 'CreatedAt', 'created_at'])
+    );
     const createdBy = pickField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
     const qty = Number(item.__computedQty) || 0;
 
@@ -358,7 +407,7 @@ function openReceiveDrawerByIndex(index) {
   const displayTitle = String(pickField(item, ['ReceiveNo', 'receive_no', 'ReceiveID', 'receive_id', 'Row ID'], '-'));
   document.getElementById('receiveDrawerTitle').textContent = displayTitle;
 
-  const fieldsHtml = renderFilteredReceiveColumnsList(item, EXCLUDED_RECEIVE_HEADER_KEYS);
+  const fieldsHtml = renderFilteredReceiveColumnsList(item, EXCLUDED_RECEIVE_HEADER_KEYS, RECEIVE_HEADER_LABELS);
 
   selectedReceiveDetails = receiveDetailRows.filter(
     (d) => String(pickField(d, ['ReceiveID', 'receive_id', 'Receive_ID'], '')).trim() === recId.trim()
@@ -373,7 +422,7 @@ function openReceiveDrawerByIndex(index) {
           <div class="mono txt-emerald" style="font-size:11px;font-weight:700;margin-bottom:6px;">
             ITEM #${dIdx + 1}
           </div>
-          <div>${renderFilteredReceiveColumnsList(d, EXCLUDED_RECEIVE_DETAIL_KEYS)}</div>
+          <div>${renderFilteredReceiveColumnsList(d, EXCLUDED_RECEIVE_DETAIL_KEYS, RECEIVE_DETAIL_LABELS)}</div>
         </div>
       `
       )
@@ -419,7 +468,7 @@ function exportSelectedReceiveToXLSX() {
     return;
   }
 
-  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
+  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : formatReceiveDisplayValue(v));
 
   const headers = [
     'Part_Name',

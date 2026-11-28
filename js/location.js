@@ -1,6 +1,26 @@
 let matrixCards = [];
 let currentFilter = 'all';
 
+// =====================================================================
+// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Modal รายการสินค้าได้ง่ายในอนาคต)
+// =====================================================================
+const LOCATION_MODAL_LABELS = {
+  lotLabel: 'LOT',
+  qtyBalanceLabel: 'QTY',
+  emptyText: 'EMPTY'
+};
+
+// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
+const formatLocationDisplayValue = (val) => {
+  if (val === null || val === undefined || String(val).trim() === '') return '-';
+  const str = String(val).trim();
+  const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+  if (isoMatch) {
+    return `${isoMatch[1]} ${isoMatch[2]}`;
+  }
+  return str;
+};
+
 const getClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
 const pickField = (obj, keys, fallback = '') => {
@@ -78,7 +98,7 @@ function openLocationModal(card) {
       .map((item) => {
         const boxId = pickField(item, ['StockBoxID', 'stock_box_id', 'Row ID']);
         const partName = pickField(item, ['Part_Name', 'part_name', 'Product']);
-        const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No']);
+        const lotNo = formatLocationDisplayValue(pickField(item, ['LotNo', 'lot_no', 'Lot_No']));
         const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
 
         return `
@@ -86,12 +106,12 @@ function openLocationModal(card) {
             <div>
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
                 <span class="mono txt-cyan" style="font-size:12.5px;font-weight:700;">${escapeHtml(boxId)}</span>
-                <span class="mono txt-muted" style="font-size:12px;">LOT: ${escapeHtml(lotNo)}</span>
+                <span class="mono txt-muted" style="font-size:12px;">${escapeHtml(LOCATION_MODAL_LABELS.lotLabel)}: ${escapeHtml(lotNo)}</span>
               </div>
               <div class="txt-primary" style="font-size:14px;font-weight:600;">${escapeHtml(partName)}</div>
             </div>
             <div class="mono" style="text-align:right;">
-              <div class="txt-muted" style="font-size:11px;">QTY BALANCE</div>
+              <div class="txt-muted" style="font-size:11px;">${escapeHtml(LOCATION_MODAL_LABELS.qtyBalanceLabel)}</div>
               <div class="${qty > 0 ? 'txt-emerald' : 'txt-muted'}" style="font-size:16px;font-weight:700;">${qty.toLocaleString()}</div>
             </div>
           </div>
@@ -209,7 +229,7 @@ function renderMatrix() {
         };"></span>
       </div>
       <div class="mono slot-sub" style="margin-top:8px;font-size:11px;font-weight:600;">
-        ${c.occupied ? `${c.boxes} กล่อง · ${c.qty.toLocaleString()} ชิ้น` : 'EMPTY'}
+        ${c.occupied ? `${c.boxes} กล่อง · ${c.qty.toLocaleString()} ชิ้น` : escapeHtml(LOCATION_MODAL_LABELS.emptyText)}
       </div>
     `;
 

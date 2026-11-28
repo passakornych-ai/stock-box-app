@@ -2,6 +2,35 @@ let allStockRows = [];
 let currentFilteredRows = [];
 let sortState = { key: null, dir: 'asc' };
 
+// =====================================================================
+// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงในตารางและ Drawer ได้ง่ายในอนาคต)
+// =====================================================================
+const DASHBOARD_TABLE_LABELS = {
+  Part_Name: 'CARTON PART NO.',
+  Type_cartons: 'TYPE_CARTONS',
+  LotNo: 'LOT',
+  Location_Name: 'LOCATION',
+  QtyBalance: 'QTY'
+};
+
+const BOX_INSPECTOR_LABELS = {
+  part_name: 'Carton Part No.',
+  type_cartons: 'ประเภทกล่อง',
+  lotno: 'Lot No.',
+  lot_no: 'Lot No.',
+  location_name: 'Location',
+  qtybalance: 'จำนวนคงเหลือ',
+  qty_balance: 'จำนวนคงเหลือ',
+  qty: 'จำนวน',
+  type: 'ประเภท',
+  createdat: 'วันที่สร้าง',
+  created_at: 'วันที่สร้าง',
+  createdby: 'ผู้สร้าง',
+  created_by: 'ผู้สร้าง',
+  remark: 'หมายเหตุ',
+  remarks: 'หมายเหตุ'
+};
+
 const EXCLUDED_BOX_INSPECTOR_KEYS = new Set([
   'rowid', 'row_id', 'row id',
   'stockboxid', 'stock_box_id',
@@ -10,6 +39,19 @@ const EXCLUDED_BOX_INSPECTOR_KEYS = new Set([
 ]);
 
 const normalizeBoxKey = (k) => String(k || '').trim().toLowerCase();
+
+const getBoxInspectorLabel = (key) => BOX_INSPECTOR_LABELS[normalizeBoxKey(key)] || key;
+
+// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
+const formatDashboardDisplayValue = (val) => {
+  if (val === null || val === undefined || String(val).trim() === '') return '-';
+  const str = String(val).trim();
+  const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+  if (isoMatch) {
+    return `${isoMatch[1]} ${isoMatch[2]}`;
+  }
+  return str;
+};
 
 const getClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
@@ -110,11 +152,11 @@ function initSortableHeaders() {
 function updateSortIndicators() {
   const ths = document.querySelectorAll('.data-table thead th');
   const keyByIndex = ['Part_Name', 'Type_cartons', 'LotNo', 'Location_Name', 'QtyBalance'];
-  const baseLabels = ['CARTON PART NO.', 'TYPE_CARTONS', 'LOT', 'LOCATION', 'QTYBALANCE'];
 
   ths.forEach((th, index) => {
     const key = keyByIndex[index];
     if (!key) return;
+    const baseLabel = DASHBOARD_TABLE_LABELS[key] || key;
     let arrow = ' ↕';
     if (sortState.key === key) {
       arrow = sortState.dir === 'asc' ? ' ↑' : ' ↓';
@@ -122,7 +164,7 @@ function updateSortIndicators() {
     } else {
       th.style.color = 'var(--text-muted)';
     }
-    th.textContent = `${baseLabels[index]}${arrow}`;
+    th.textContent = `${baseLabel}${arrow}`;
   });
 }
 
@@ -258,7 +300,7 @@ function renderTable(rows) {
   currentFilteredRows.forEach((item, idx) => {
     const partName = pickField(item, ['Part_Name', 'part_name', 'Product', 'Carton Part No.']);
     const typeCartons = pickField(item, ['Type_cartons', 'type_cartons', 'TypeCartons', 'Type']);
-    const lotNo = pickField(item, ['LotNo', 'lot_no', 'Lot_No', 'Lot']);
+    const lotNo = formatDashboardDisplayValue(pickField(item, ['LotNo', 'lot_no', 'Lot_No', 'Lot']));
     const loc = pickField(item, ['Location_Name', 'location_name', 'LocationID', 'location_id', 'Location']);
     const qty = Number(pickField(item, ['QtyBalance', 'qty_balance', 'Qty', 'qty'], 0)) || 0;
 
@@ -309,8 +351,8 @@ function openDrawerByIndex(index) {
     .map(
       ([key, val]) => `
       <div class="detail-row">
-        <dt class="mono txt-muted" style="font-size:12px;">${escapeHtml(key)}</dt>
-        <dd class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;margin:0;">${escapeHtml(val ?? '-')}</dd>
+        <dt class="mono txt-muted" style="font-size:12px;">${escapeHtml(getBoxInspectorLabel(key))}</dt>
+        <dd class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;margin:0;">${escapeHtml(formatDashboardDisplayValue(val))}</dd>
       </div>
     `
     )
@@ -333,7 +375,7 @@ function exportFilteredToExcel() {
     return;
   }
 
-  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
+  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : formatDashboardDisplayValue(v));
   const headers = ['Carton Part No.', 'Type', 'Lot', 'Location', 'Qty'];
 
   const excelRows = currentFilteredRows.map((item) => ({

@@ -5,6 +5,34 @@ let selectedMoveItem = null;
 let selectedMoveDetails = [];
 let moveSortState = { key: null, dir: 'desc' };
 
+// =====================================================================
+// [1] CONFIG LABEL ที่นี่ (แก้ชื่อที่แสดงใน Drawer ได้ง่ายในอนาคต)
+// =====================================================================
+const MOVE_HEADER_LABELS = {
+  moveno: 'เลขที่ใบย้าย',
+  move_no: 'เลขที่ใบย้าย',
+  movedate: 'วันที่ย้าย',
+  move_date: 'วันที่ย้าย',
+  createdat: 'วันที่สร้าง',
+  created_at: 'วันที่สร้าง',
+  createdby: 'ผู้สร้าง',
+  created_by: 'ผู้สร้าง'
+};
+
+const MOVE_DETAIL_LABELS = {
+  part_name: 'Carton Part No.',
+  lotno: 'Lot No.',
+  lot_no: 'Lot No.',
+  location_name: 'Location (เดิม)',
+  newlocation_name: 'Location (ใหม่)',
+  new_location_name: 'Location (ใหม่)',
+  qty: 'จำนวน',
+  type: 'ประเภท',
+  type_cartons: 'ประเภทกล่อง',
+  createdat: 'วันที่สร้าง',
+  created_at: 'วันที่สร้าง'
+};
+
 const EXCLUDED_MOVE_HEADER_KEYS = new Set([
   'rowid', 'row_id', 'row id',
   'moveid', 'move_id',
@@ -20,6 +48,19 @@ const EXCLUDED_MOVE_DETAIL_KEYS = new Set([
 ]);
 
 const normalizeMoveKey = (k) => String(k || '').trim().toLowerCase();
+
+const getMoveLabel = (key, labelMap) => labelMap[normalizeMoveKey(key)] || key;
+
+// แปลงวันที่รูปแบบ ISO เช่น 2026-11-27T11:20:33 -> 2026-11-27 11:20:33 (เว้นตัว T ออก)
+const formatMoveDisplayValue = (val) => {
+  if (val === null || val === undefined || String(val).trim() === '') return '-';
+  const str = String(val).trim();
+  const isoMatch = str.match(/^(\d{4}-\d{2}-\d{2})[T](\d{2}:\d{2}(?::\d{2})?)(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+  if (isoMatch) {
+    return `${isoMatch[1]} ${isoMatch[2]}`;
+  }
+  return str;
+};
 
 const getMoveClient = () => window._supabase || (typeof _supabase !== 'undefined' ? _supabase : null);
 
@@ -40,16 +81,17 @@ const escapeMoveHtml = (str) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 
-function renderFilteredMoveColumnsList(obj, excludedSet) {
+function renderFilteredMoveColumnsList(obj, excludedSet, labelMap = {}) {
   const entries = Object.entries(obj || {}).filter(
     ([k]) => !k.startsWith('__') && !excludedSet.has(normalizeMoveKey(k))
   );
   return entries
     .map(([k, v]) => {
-      const displayVal = v === null || v === undefined || String(v).trim() === '' ? '-' : String(v);
+      const displayLabel = getMoveLabel(k, labelMap);
+      const displayVal = formatMoveDisplayValue(v);
       return `
         <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border-row);">
-          <span class="mono txt-muted" style="font-size:11.5px;flex-shrink:0;">${escapeMoveHtml(k)}</span>
+          <span class="mono txt-muted" style="font-size:11.5px;flex-shrink:0;">${escapeMoveHtml(displayLabel)}</span>
           <span class="mono txt-primary" style="font-size:12px;font-weight:600;text-align:right;word-break:break-all;">${escapeMoveHtml(displayVal)}</span>
         </div>
       `;
@@ -312,7 +354,9 @@ function renderMoveTable(rows) {
   tbody.innerHTML = '';
   currentFilteredMoveRows.forEach((item, idx) => {
     const moveNo = pickMoveField(item, ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Move_ID', 'Row ID']);
-    const movDate = pickMoveField(item, ['MoveDate', 'move_date', 'Move_Date', 'Date', 'CreatedAt', 'created_at']);
+    const movDate = formatMoveDisplayValue(
+      pickMoveField(item, ['MoveDate', 'move_date', 'Move_Date', 'Date', 'CreatedAt', 'created_at'])
+    );
     const createdBy = pickMoveField(item, ['CreatedBy', 'created_by', 'Operator', 'User']);
     const qty = Number(item.__computedQty) || 0;
 
@@ -350,7 +394,7 @@ function openMoveDrawerByIndex(index) {
   const displayTitle = String(pickMoveField(item, ['MoveNo', 'move_no', 'MoveID', 'move_id', 'Row ID'], '-'));
   document.getElementById('moveDrawerTitle').textContent = displayTitle;
 
-  const fieldsHtml = renderFilteredMoveColumnsList(item, EXCLUDED_MOVE_HEADER_KEYS);
+  const fieldsHtml = renderFilteredMoveColumnsList(item, EXCLUDED_MOVE_HEADER_KEYS, MOVE_HEADER_LABELS);
 
   selectedMoveDetails = moveDetailRows.filter(
     (d) => String(pickMoveField(d, ['MoveID', 'move_id', 'Move_ID'], '')).trim() === movId.trim()
@@ -365,7 +409,7 @@ function openMoveDrawerByIndex(index) {
           <div class="mono txt-indigo" style="font-size:11px;font-weight:700;margin-bottom:6px;">
             ITEM #${dIdx + 1}
           </div>
-          <div>${renderFilteredMoveColumnsList(d, EXCLUDED_MOVE_DETAIL_KEYS)}</div>
+          <div>${renderFilteredMoveColumnsList(d, EXCLUDED_MOVE_DETAIL_KEYS, MOVE_DETAIL_LABELS)}</div>
         </div>
       `
       )
@@ -411,7 +455,7 @@ function exportSelectedMoveToXLSX() {
     return;
   }
 
-  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : v);
+  const cleanVal = (v) => (v === null || v === undefined || String(v).trim() === '' ? '-' : formatMoveDisplayValue(v));
 
   const headers = [
     'Part_Name',
@@ -426,7 +470,7 @@ function exportSelectedMoveToXLSX() {
   const excelRows = selectedMoveDetails.map((d) => ({
     Part_Name: cleanVal(pickMoveField(d, ['Part_Name', 'part_name', 'Product'], '-')),
     LotNo: cleanVal(pickMoveField(d, ['LotNo', 'lot_no', 'Lot_No'], '-')),
-    Location_Name: cleanVal(pickField(d, ['Location_Name', 'location_name', 'From_Location', 'Location'], '-')),
+    Location_Name: cleanVal(pickMoveField(d, ['Location_Name', 'location_name', 'From_Location', 'Location'], '-')),
     NewLocation_Name: cleanVal(pickMoveField(d, ['NewLocation_Name', 'new_location_name', 'To_Location'], '-')),
     Qty: Number(pickMoveField(d, ['Qty', 'qty', 'MoveQty', 'move_qty'], 0)) || 0,
     Type: cleanVal(pickMoveField(d, ['Type', 'type'], '-')),
