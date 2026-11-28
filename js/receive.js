@@ -443,7 +443,7 @@ function exportSelectedReceiveToXLSX() {
   ws['!cols'] = headers.map(() => ({ wch: 12 }));
 
   if (ws['A1']) {
-    ws['A1'].s = {
+    ws['A1:F1'].s = {
       fill: {
         patternType: 'solid',
         fgColor: { rgb: 'D9E1F2' }
