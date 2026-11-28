@@ -137,6 +137,96 @@
       </div>
     </section>
 
+    <!-- PIN Guard Modal for receive-import -->
+<div id="importPagePinModal" class="hidden" style="position:fixed;inset:0;z-index:80;">
+  <div style="position:fixed;inset:0;background:rgba(15,23,42,0.72);backdrop-filter:blur(4px);"></div>
+  <div style="position:relative;z-index:10;max-width:380px;margin:110px auto 24px;padding:0 16px;">
+    <div class="modal-card" style="padding:22px;display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <div class="mono txt-cyan" style="font-size:11px;font-weight:700;">PROTECTED PAGE</div>
+        <h2 class="txt-primary" style="margin:4px 0 0;font-size:17px;font-weight:700;">กรอกรหัส PIN เพื่อเข้าใช้งาน Import</h2>
+        <p class="txt-muted" style="margin:4px 0 0;font-size:12px;">หน้านี้ถูกจำกัดสิทธิ์การนำเข้าข้อมูล</p>
+      </div>
+
+      <div>
+        <label class="mono txt-muted" style="display:block;font-size:11px;margin-bottom:6px;">PIN CODE</label>
+        <input id="importPagePinInput" type="password" inputmode="numeric" class="input-control mono"
+          style="width:100%;font-size:16px;letter-spacing:4px;" placeholder="••••"
+          onkeydown="if(event.key==='Enter') verifyImportPagePin();" />
+        <div id="importPagePinError" class="hidden" style="margin-top:6px;font-size:12px;color:#e11d48;">
+          รหัส PIN ไม่ถูกต้อง
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px;">
+        <a href="../receive/" class="btn btn-ghost">← กลับหน้ารับเข้า</a>
+        <button type="button" onclick="verifyImportPagePin()" class="btn btn-cyan">ยืนยันรหัส</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ตั้งรหัส PIN ให้ตรงกับหน้า receive/index.html
+  const IMPORT_ACCESS_PIN = '1234';
+  const IMPORT_UNLOCK_KEY = 'stockbox_import_unlocked';
+
+  function setImportPageLockedState(locked) {
+    const fileInput = document.getElementById('receiveFileInput');
+    const saveBtn = document.getElementById('saveImportReceiveBtn');
+    const mainEl = document.querySelector('main');
+
+    if (fileInput) fileInput.disabled = locked;
+    if (saveBtn && locked) saveBtn.disabled = true;
+    if (mainEl) {
+      mainEl.style.filter = locked ? 'blur(3px)' : '';
+      mainEl.style.pointerEvents = locked ? 'none' : '';
+    }
+  }
+
+  function showImportPagePinModal() {
+    setImportPageLockedState(true);
+    const modal = document.getElementById('importPagePinModal');
+    const input = document.getElementById('importPagePinInput');
+    const errEl = document.getElementById('importPagePinError');
+    if (errEl) errEl.classList.add('hidden');
+    modal?.classList.remove('hidden');
+    if (input) {
+      input.value = '';
+      setTimeout(() => input.focus(), 40);
+    }
+  }
+
+  function verifyImportPagePin() {
+    const input = document.getElementById('importPagePinInput');
+    const errEl = document.getElementById('importPagePinError');
+    const entered = (input?.value || '').trim();
+
+    if (entered === IMPORT_ACCESS_PIN) {
+      sessionStorage.setItem(IMPORT_UNLOCK_KEY, '1');
+      document.getElementById('importPagePinModal')?.classList.add('hidden');
+      setImportPageLockedState(false);
+      if (typeof renderImportPreview === 'function') {
+        renderImportPreview();
+      }
+    } else {
+      errEl?.classList.remove('hidden');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (sessionStorage.getItem(IMPORT_UNLOCK_KEY) !== '1') {
+      showImportPagePinModal();
+    } else {
+      setImportPageLockedState(false);
+    }
+  });
+</script>
+
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
