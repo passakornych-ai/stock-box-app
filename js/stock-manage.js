@@ -551,26 +551,6 @@ async function saveStockBoxRecord(event) {
       }
       const { error } = await client.from('stock_box').update(payload).eq(pk.column, pk.value);
       if (error) throw error;
-      showMgrToast(`UPDATED: ${partName}`);
-    } else {
-      const idCol = resolveActualColumnName(sampleRow, ['StockBoxID', 'stock_box_id'], 'StockBoxID');
-      if (!sampleRow || Object.prototype.hasOwnProperty.call(sampleRow, idCol)) {
-        payload[idCol] = generateStockBoxId(8);
-      }
-      const { error } = await client.from('stock_box').insert([payload]);
-      if (error) throw error;
-      showMgrToast(`ADDED: ${partName}`);
-    }
-
-    closeStockEditModal();
-    await loadStockManage();
-    if (isEdit && targetRow) {
-      const pk = resolvePrimaryKeyInfo(targetRow);
-      if (!pk) {
-        throw new Error('ไม่พบ Primary Key (StockBoxID / Row ID) สำหรับอัปเดตแถวนี้');
-      }
-      const { error } = await client.from('stock_box').update(payload).eq(pk.column, pk.value);
-      if (error) throw error;
 
       await window.ActivityLogger?.log({
         page: 'Stock Manage',
@@ -600,6 +580,9 @@ async function saveStockBoxRecord(event) {
 
       showMgrToast(`ADDED: ${partName}`);
     }
+
+    closeStockEditModal();
+    await loadStockManage();
   } catch (err) {
     console.error('Save Stock Box Error:', err);
     showMgrToast(`ERROR: ${err.message || 'บันทึกไม่สำเร็จ'}`, true);
@@ -609,7 +592,6 @@ async function saveStockBoxRecord(event) {
 }
 
 async function deleteSingleStockRow(filteredIndex) {
-  
   const item = currentFilteredMgrRows[filteredIndex];
   if (!item) return;
 
@@ -630,13 +612,15 @@ async function deleteSingleStockRow(filteredIndex) {
     const client = getMgrClient();
     const { error } = await client.from('stock_box').delete().eq(pk.column, pk.value);
     if (error) throw error;
+
     await window.ActivityLogger?.log({
       page: 'Stock Manage',
       action: 'DELETE',
       actor: 'Admin',
-      summary: `ลบกล่อง ${partName} (Lot: ${lotNo || '-'}, Location: ${locationName}, Qty: ${qtyBalance})`,
-      meta: { id: pk.value, partName, typeCartons, lotNo, locationName, qtyBalance, remark }
+      summary: `ลบกล่อง ${partName} (Location: ${loc}, ${pk.column}: ${pk.value}) ออกจาก stock_box`,
+      meta: { id: pk.value, partName, locationName: loc }
     });
+
     showMgrToast(`DELETED: ${partName}`);
     await loadStockManage();
   } catch (err) {
@@ -646,27 +630,6 @@ async function deleteSingleStockRow(filteredIndex) {
 }
 
 async function deleteSelectedStockRows() {
-  for (const col of pkColumns) {
-      const { error } = await client.from('stock_box').delete().in(col, groupedByPkCol[col]);
-      if (error) throw error;
-    }
-
-    const previewNames = targets
-      .slice(0, 5)
-      .map((r) => pickMgrField(r, ['Part_Name', 'part_name'], '-'))
-      .join(', ');
-    const extraCount = targets.length > 5 ? ` และอีก ${targets.length - 5} รายการ` : '';
-
-    await window.ActivityLogger?.log({
-      page: 'Stock Manage',
-      action: 'DELETE',
-      actor: 'Admin',
-      summary: `ลบข้อมูลแบบหลายรายการ ${targets.length} แถว (${previewNames}${extraCount}) ออกจาก stock_box`,
-      meta: { count: targets.length, items: previewNames }
-    });
-
-    showMgrToast(`DELETED ${targets.length} ROWS`);
-    await loadStockManage();
   if (selectedRowKeys.size === 0) return;
 
   const targets = currentFilteredMgrRows.filter((item, idx) =>
@@ -700,6 +663,20 @@ async function deleteSelectedStockRows() {
       if (error) throw error;
     }
 
+    const previewNames = targets
+      .slice(0, 5)
+      .map((r) => pickMgrField(r, ['Part_Name', 'part_name'], '-'))
+      .join(', ');
+    const extraCount = targets.length > 5 ? ` และอีก ${targets.length - 5} รายการ` : '';
+
+    await window.ActivityLogger?.log({
+      page: 'Stock Manage',
+      action: 'DELETE',
+      actor: 'Admin',
+      summary: `ลบข้อมูลแบบหลายรายการ ${targets.length} แถว (${previewNames}${extraCount}) ออกจาก stock_box`,
+      meta: { count: targets.length, items: previewNames }
+    });
+
     showMgrToast(`DELETED ${targets.length} ROWS`);
     await loadStockManage();
   } catch (err) {
@@ -708,11 +685,86 @@ async function deleteSelectedStockRows() {
   }
 }
 
+// เปลี่ยนรหัส PIN ตรงนี้ (ให้ตรงกับหน้า Dashboard)
+const ACTION_PIN_CODE = '1234';
+let pendingPinCallback = null;
+let pendingDeleteResolver = null;
+
+function openPinActionModal(event, onSuccess, titleText = 'กรอกรหัส PIN') {
+  if (event) event.preventDefault();
+  pendingPinCallback = typeof onSuccess === 'function' ? onSuccess : null;
+
+  const modal = document.getElementById('pinGuardModal');
+  const input = document.getElementById('pinGuardInput');
+  const errEl = document.getElementById('pinGuardError');
+  const titleEl = document.getElementById('pinGuardTitle');
+
+  if (titleEl) titleEl.textContent = titleText;
+  if (errEl) errEl.classList.add('hidden');
+  if (input) {
+    input.value = '';
+    modal?.classList.remove('hidden');
+    setTimeout(() => input.focus(), 30);
+  }
+  return false;
+}
+
+function closePinGuardModal() {
+  pendingPinCallback = null;
+  document.getElementById('pinGuardModal')?.classList.add('hidden');
+}
+
+function verifyPinGuard() {
+  const input = document.getElementById('pinGuardInput');
+  const errEl = document.getElementById('pinGuardError');
+  const entered = (input?.value || '').trim();
+
+  if (entered === ACTION_PIN_CODE) {
+    const cb = pendingPinCallback;
+    closePinGuardModal();
+    window.ActivityLogger?.log({
+      page: 'Stock Manage',
+      action: 'UNLOCK',
+      actor: 'Admin',
+      summary: 'ปลดล็อก PIN บนหน้า Stock Manage'
+    });
+    if (cb) cb();
+  } else {
+    errEl?.classList.remove('hidden');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
+}
+
+function openCustomDeleteConfirm(message) {
+  return new Promise((resolve) => {
+    pendingDeleteResolver = resolve;
+    const msgEl = document.getElementById('confirmDeleteMessage');
+    if (msgEl) msgEl.textContent = message;
+    document.getElementById('confirmDeleteModal')?.classList.remove('hidden');
+  });
+}
+
+function resolveDeleteConfirm(confirmed) {
+  document.getElementById('confirmDeleteModal')?.classList.add('hidden');
+  if (typeof pendingDeleteResolver === 'function') {
+    const fn = pendingDeleteResolver;
+    pendingDeleteResolver = null;
+    fn(Boolean(confirmed));
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initMgrSortableHeaders();
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeStockEditModal();
+    if (e.key === 'Escape') {
+      closeStockEditModal();
+      closePinGuardModal();
+      resolveDeleteConfirm(false);
+    }
   });
 
   document.getElementById('mgrSearchInput')?.addEventListener('input', () => renderMgrTable(allMgrRows));
@@ -722,68 +774,3 @@ document.addEventListener('DOMContentLoaded', () => {
   loadLocationDatalist();
   loadStockManage();
 });
-
-// เปลี่ยนรหัส PIN ตรงนี้ (ให้ตรงกับหน้า Dashboard)
-  const ACTION_PIN_CODE = '1234';
-  let pendingPinCallback = null;
-  let pendingDeleteResolver = null;
-
-  function openPinActionModal(event, onSuccess, titleText = 'กรอกรหัส PIN') {
-    if (event) event.preventDefault();
-    pendingPinCallback = typeof onSuccess === 'function' ? onSuccess : null;
-
-    const modal = document.getElementById('pinGuardModal');
-    const input = document.getElementById('pinGuardInput');
-    const errEl = document.getElementById('pinGuardError');
-    const titleEl = document.getElementById('pinGuardTitle');
-
-    if (titleEl) titleEl.textContent = titleText;
-    if (errEl) errEl.classList.add('hidden');
-    if (input) {
-      input.value = '';
-      modal?.classList.remove('hidden');
-      setTimeout(() => input.focus(), 30);
-    }
-    return false;
-  }
-
-  function closePinGuardModal() {
-    pendingPinCallback = null;
-    document.getElementById('pinGuardModal')?.classList.add('hidden');
-  }
-
-  function verifyPinGuard() {
-    const input = document.getElementById('pinGuardInput');
-    const errEl = document.getElementById('pinGuardError');
-    const entered = (input?.value || '').trim();
-
-    if (entered === ACTION_PIN_CODE) {
-      const cb = pendingPinCallback;
-      closePinGuardModal();
-      if (cb) cb();
-    } else {
-      errEl?.classList.remove('hidden');
-      if (input) {
-        input.value = '';
-        input.focus();
-      }
-    }
-  }
-
-  function openCustomDeleteConfirm(message) {
-    return new Promise((resolve) => {
-      pendingDeleteResolver = resolve;
-      const msgEl = document.getElementById('confirmDeleteMessage');
-      if (msgEl) msgEl.textContent = message;
-      document.getElementById('confirmDeleteModal')?.classList.remove('hidden');
-    });
-  }
-
-  function resolveDeleteConfirm(confirmed) {
-    document.getElementById('confirmDeleteModal')?.classList.add('hidden');
-    if (typeof pendingDeleteResolver === 'function') {
-      const fn = pendingDeleteResolver;
-      pendingDeleteResolver = null;
-      fn(Boolean(confirmed));
-    }
-  }

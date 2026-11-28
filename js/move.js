@@ -514,6 +514,15 @@ function exportSelectedMoveToXLSX() {
   const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_move';
 
   XLSX.writeFile(wb, `${safeFileName}.xlsx`);
+
+  window.ActivityLogger?.log({
+    page: 'Move',
+    action: 'EXPORT',
+    actor: pickMoveField(selectedMoveItem, ['CreatedBy', 'created_by'], 'Admin'),
+    summary: `Export รายละเอียดใบย้าย ${rawDocName} (${excelRows.length} รายการ) เป็นไฟล์ ${safeFileName}.xlsx`,
+    meta: { moveNo: rawDocName, itemCount: excelRows.length, fileName: `${safeFileName}.xlsx` }
+  });
+
   showMoveToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
 }
 

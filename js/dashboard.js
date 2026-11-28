@@ -414,8 +414,71 @@ function exportFilteredToExcel() {
   XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
 
   const stamp = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `stock_box_${stamp}.xlsx`);
+  const fileName = `stock_box_${stamp}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+
+  window.ActivityLogger?.log({
+    page: 'Dashboard',
+    action: 'EXPORT',
+    actor: 'Admin',
+    summary: `Export สต็อกคงเหลือ ${currentFilteredRows.length} รายการเป็นไฟล์ ${fileName}`,
+    meta: { count: currentFilteredRows.length, fileName }
+  });
+
   showToast(`EXPORTED ${currentFilteredRows.length} ROWS (.XLSX)`);
+}
+
+// PIN Lock สำหรับปุ่มจัดการสต็อก (ถามรหัสทุกครั้งที่กด)
+const IMPORT_ACCESS_PIN = '1234';
+const IMPORT_UNLOCK_KEY = 'stockbox_import_unlocked';
+let pendingImportHref = './stock-manage/';
+
+function openImportPinModal(event) {
+  event?.preventDefault();
+  pendingImportHref = event?.currentTarget?.getAttribute('href') || './stock-manage/';
+
+  // ล้างสถานะปลดล็อกเดิมทุกครั้งที่กด เพื่อบังคับถามรหัสใหม่ทุกครั้ง
+  sessionStorage.removeItem(IMPORT_UNLOCK_KEY);
+
+  const modal = document.getElementById('importPinModal');
+  const input = document.getElementById('importPinInput');
+  const errEl = document.getElementById('importPinError');
+  if (errEl) errEl.classList.add('hidden');
+  if (input) {
+    input.value = '';
+    modal?.classList.remove('hidden');
+    setTimeout(() => input.focus(), 30);
+  }
+  return false;
+}
+
+function closeImportPinModal() {
+  document.getElementById('importPinModal')?.classList.add('hidden');
+}
+
+function verifyImportPin() {
+  const input = document.getElementById('importPinInput');
+  const errEl = document.getElementById('importPinError');
+  const entered = (input?.value || '').trim();
+
+  if (entered === IMPORT_ACCESS_PIN) {
+    sessionStorage.setItem(IMPORT_UNLOCK_KEY, '1');
+    closeImportPinModal();
+    window.ActivityLogger?.log({
+      page: 'Dashboard',
+      action: 'UNLOCK',
+      actor: 'Admin',
+      summary: `ปลดล็อก PIN เพื่อเข้าใช้งานเมนูจัดการสต็อก (${pendingImportHref})`,
+      meta: { target: pendingImportHref }
+    });
+    window.location.href = pendingImportHref;
+  } else {
+    errEl?.classList.remove('hidden');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -425,49 +488,3 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('statusFilter')?.addEventListener('change', () => renderTable(allStockRows));
   loadDashboard();
 });
-
-// เปลี่ยนรหัส PIN ที่ต้องการใช้งานตรงนี้
-  const IMPORT_ACCESS_PIN = '1234';
-  const IMPORT_UNLOCK_KEY = 'stockbox_import_unlocked';
-  let pendingImportHref = '../receive-import/';
-
-  function openImportPinModal(event) {
-    event?.preventDefault();
-    pendingImportHref = event?.currentTarget?.getAttribute('href') || '../receive-import/';
-
-    // ล้างสถานะปลดล็อกเดิมทุกครั้งที่กด เพื่อบังคับถามรหัสใหม่ทุกครั้ง
-    sessionStorage.removeItem(IMPORT_UNLOCK_KEY);
-
-    const modal = document.getElementById('importPinModal');
-    const input = document.getElementById('importPinInput');
-    const errEl = document.getElementById('importPinError');
-    if (errEl) errEl.classList.add('hidden');
-    if (input) {
-      input.value = '';
-      modal?.classList.remove('hidden');
-      setTimeout(() => input.focus(), 30);
-    }
-    return false;
-  }
-
-  function closeImportPinModal() {
-    document.getElementById('importPinModal')?.classList.add('hidden');
-  }
-
-  function verifyImportPin() {
-    const input = document.getElementById('importPinInput');
-    const errEl = document.getElementById('importPinError');
-    const entered = (input?.value || '').trim();
-
-    if (entered === IMPORT_ACCESS_PIN) {
-      sessionStorage.setItem(IMPORT_UNLOCK_KEY, '1');
-      closeImportPinModal();
-      window.location.href = pendingImportHref;
-    } else {
-      errEl?.classList.remove('hidden');
-      if (input) {
-        input.value = '';
-        input.focus();
-      }
-    }
-  }

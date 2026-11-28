@@ -525,14 +525,79 @@ function exportSelectedReceiveToXLSX() {
   const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_receive';
 
   XLSX.writeFile(wb, `${safeFileName}.xlsx`);
+
+  window.ActivityLogger?.log({
+    page: 'Receive',
+    action: 'EXPORT',
+    actor: pickField(selectedReceiveItem, ['CreatedBy', 'created_by'], 'Admin'),
+    summary: `Export รายละเอียดใบรับเข้า ${rawDocName} (${excelRows.length} รายการ) เป็นไฟล์ ${safeFileName}.xlsx`,
+    meta: { receiveNo: rawDocName, itemCount: excelRows.length, fileName: `${safeFileName}.xlsx` }
+  });
+
   showToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
+}
+
+// PIN Lock สำหรับปุ่มเพิ่มเข้าสินค้า (ถามรหัสทุกครั้งที่กด)
+const IMPORT_ACCESS_PIN = '1234';
+const IMPORT_UNLOCK_KEY = 'stockbox_import_unlocked';
+let pendingImportHref = '../receive-import/';
+
+function openImportPinModal(event) {
+  event?.preventDefault();
+  pendingImportHref = event?.currentTarget?.getAttribute('href') || '../receive-import/';
+
+  // ล้างสถานะปลดล็อกเดิมทุกครั้งที่กด เพื่อบังคับถามรหัสใหม่ทุกครั้ง
+  sessionStorage.removeItem(IMPORT_UNLOCK_KEY);
+
+  const modal = document.getElementById('importPinModal');
+  const input = document.getElementById('importPinInput');
+  const errEl = document.getElementById('importPinError');
+  if (errEl) errEl.classList.add('hidden');
+  if (input) {
+    input.value = '';
+    modal?.classList.remove('hidden');
+    setTimeout(() => input.focus(), 30);
+  }
+  return false;
+}
+
+function closeImportPinModal() {
+  document.getElementById('importPinModal')?.classList.add('hidden');
+}
+
+function verifyImportPin() {
+  const input = document.getElementById('importPinInput');
+  const errEl = document.getElementById('importPinError');
+  const entered = (input?.value || '').trim();
+
+  if (entered === IMPORT_ACCESS_PIN) {
+    sessionStorage.setItem(IMPORT_UNLOCK_KEY, '1');
+    closeImportPinModal();
+    window.ActivityLogger?.log({
+      page: 'Receive',
+      action: 'UNLOCK',
+      actor: 'Admin',
+      summary: `ปลดล็อก PIN เพื่อเข้าใช้งานเมนูเพิ่มเข้าสินค้า (${pendingImportHref})`,
+      meta: { target: pendingImportHref }
+    });
+    window.location.href = pendingImportHref;
+  } else {
+    errEl?.classList.remove('hidden');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
   initReceiveSortableHeaders();
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeReceiveDrawer();
+    if (e.key === 'Escape') {
+      closeReceiveDrawer();
+      closeImportPinModal();
+    }
   });
 
   document.getElementById('receiveSearchInput')?.addEventListener('input', () => renderReceiveTable(allReceiveRows));

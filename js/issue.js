@@ -531,6 +531,15 @@ function exportSelectedIssueToXLSX() {
   const safeFileName = rawDocName.replace(/[\\/:*?"<>|]+/g, '_') || 'stock_issue';
 
   XLSX.writeFile(wb, `${safeFileName}.xlsx`);
+
+  window.ActivityLogger?.log({
+    page: 'Issue',
+    action: 'EXPORT',
+    actor: pickIssueField(selectedIssueItem, ['CreatedBy', 'created_by'], 'Admin'),
+    summary: `Export รายละเอียดใบเบิก ${rawDocName} (${excelRows.length} รายการ) เป็นไฟล์ ${safeFileName}.xlsx`,
+    meta: { issueNo: rawDocName, itemCount: excelRows.length, fileName: `${safeFileName}.xlsx` }
+  });
+
   showIssueToast(`EXPORTED ${excelRows.length} ITEMS (.XLSX)`);
 }
 

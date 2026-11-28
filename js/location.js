@@ -122,6 +122,14 @@ function openLocationModal(card) {
       .join('');
   }
 
+  window.ActivityLogger?.log({
+    page: 'Location',
+    action: 'VIEW_SLOT',
+    actor: 'Admin',
+    summary: `ตรวจสอบรายละเอียดช่อง ${card.name} (${card.occupied ? `มีของ ${card.boxes} กล่อง, ${card.qty.toLocaleString()} ชิ้น` : 'ว่าง'})`,
+    meta: { locationName: card.name, occupied: card.occupied, boxes: card.boxes, qty: card.qty }
+  });
+
   modal.classList.remove('hidden');
 }
 

@@ -66,7 +66,6 @@
     </div>
   </header>
 
-
   <main class="app-container" style="padding-top:24px;padding-bottom:40px;display:flex;flex-direction:column;gap:20px;">
 
     <!-- KPI Cards -->
@@ -138,8 +137,8 @@
 
     <!-- Data Table -->
     <section class="panel" style="overflow:hidden;">
-      <div id="issueLoadingBanner" class="hidden mono txt-cyan" style="padding:10px 18px;background:var(--c-cyan-soft-bg);border-bottom:1px solid var(--c-cyan-soft-border);font-size:12px;">
-        ⟳ SYNCING STOCK ISSUE FROM SUPABASE...
+      <div id="issueLoadingBanner" class="hidden spinner-wrap" aria-hidden="true">
+        <span class="spinner-ring"></span>
       </div>
 
       <div style="overflow-x:auto;">
@@ -154,7 +153,11 @@
           </thead>
           <tbody id="issueTableBody">
             <tr>
-              <td colspan="4" class="txt-muted" style="padding:44px 16px;text-align:center;">กำลังโหลดข้อมูลเบิกออก...</td>
+              <td colspan="4" style="text-align:center;">
+                <div class="spinner-wrap-center" aria-hidden="true">
+                  <span class="spinner-ring spinner-ring-lg"></span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -176,11 +179,11 @@
           <button type="button" onclick="closeIssueDrawer()" class="btn btn-ghost" style="padding:6px 11px;">✕</button>
         </div>
         <div style="margin-top:20px;display:flex;flex-direction:column;gap:8px;">
-        <button id="exportIssueXlsxBtn" type="button" onclick="exportSelectedIssueToXLSX()" class="btn btn-emerald-soft" style="width:100%;">
-          <span>⬇</span>
-          <span>Export Excel</span>
-        </button>
-      </div>
+          <button id="exportIssueXlsxBtn" type="button" onclick="exportSelectedIssueToXLSX()" class="btn btn-emerald-soft" style="width:100%;">
+            <span>⬇</span>
+            <span>Export Excel</span>
+          </button>
+        </div>
         <dl id="issueDrawerContent" style="margin:18px 0 0;display:flex;flex-direction:column;gap:10px;"></dl>
       </div>
 
@@ -193,7 +196,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/config.js"></script>
-  <script src="../js/issue.js"></script>
   <script src="../js/activity-logger.js"></script>
+  <script src="../js/issue.js"></script>
 </body>
 </html>
