@@ -442,8 +442,8 @@ function exportSelectedReceiveToXLSX() {
   const ws = XLSX.utils.json_to_sheet(excelRows, { header: headers });
   ws['!cols'] = headers.map(() => ({ wch: 12 }));
 
-  if (ws['A1:F1']) {
-    ws['A1:F1'].s = {
+  if (ws['A1']) {
+    ws['A1'].s = {
       fill: {
         patternType: 'solid',
         fgColor: { rgb: 'D9E1F2' }
